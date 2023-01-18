@@ -1,0 +1,80 @@
+loginWithCode.py 验证码登录处理
+    get the phoneNum and the code
+    check the validation of the code
+    IF the code is valid THEN
+        check the phoneNum in the database
+        IF phoneNum not found THEN
+        BEGIN
+            insert a new user with the phoneNum
+            return a success
+        END
+        return a success
+        END IF
+    ELSE
+        throw an error
+    END IF
+
+login.py 账号密码登录处理
+    get the account and the password
+    check the account in the database
+    IF account is found THEN
+        compare the password input with the password stored
+        IF not match THEN
+            throw an error
+        ELSE
+            return a success
+        END IF
+    ELSE
+        throw an error
+    END IF
+
+signup.py 邮箱注册处理
+    get the email and the password and the code
+    check the email int the database
+    IF email is not found THEN
+        check the validation of the code
+        IF the code is valid THEN
+        BEGIN
+            insert a new user with the email and the password
+            return a success
+        END
+        ELSE
+            throw an error
+        END IF
+    ELSE
+        throw an error
+    END IF
+
+findPassword.py 找回密码处理
+    get the account, the code and the new password
+    check the account in the database
+    IF account is found THEN
+        check the validation of the code
+        IF the code is valid THEN
+        BEGIN
+            update password with new password
+            return a success
+        END
+        ELSE
+            throw an error
+        END IF
+    ELSE
+        throw an error
+    END IF
+
+logout.py 注销处理
+    get the account and the code
+    check the account in the database
+    IF account is found THEN
+        check the validation of the code
+        IF code is valid THEN
+        BEGIN
+            delete the user in the database
+            return a success
+        END
+        ELSE
+            throw an error
+        END IF
+    ELSE
+        throw an error
+    END IF
