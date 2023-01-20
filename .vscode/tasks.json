@@ -10,10 +10,7 @@
     ],
     "problemMatcher": {
         "owner": "cpp",
-        "fileLocation": [
-            "relative",
-            "\\"
-        ],
+        "fileLocation": "absolute",
         "pattern": {
             "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
             "file": 1,
@@ -26,8 +23,8 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "C/C++: g++.exe 生成活动文件",
-            "command": "D:\\Tools\\mingw32\\bin\\g++.exe",
+            "label": "Build",
+            "command": "D:\\Tools\\LLVM\\bin\\clang.exe",
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
