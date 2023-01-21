@@ -3,7 +3,7 @@
     "command": "g++",
     "args": [
         "-g",
-        "${file}",
+        "${fileDirname}\\**",
         "-o",
         "D:\\Programming\\GitHub\\repository\\DataStruct\\build\\${fileBasenameNoExtension}.exe",
         "-std=c++11"
