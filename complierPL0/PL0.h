@@ -1,3 +1,5 @@
+#ifndef _PL0_H
+#define _PL0_H
 #include <fstream>
 #include <iostream>
 #include <stdio.h>
@@ -12,8 +14,13 @@ using namespace std;
     "E:\\Programming\\GitHub\\repository\\DataStruct\\complierPL0\\test.txt"
 #define RSV_WORD_MAX 15 /* 保留字的数量 */
 #define N_MAX 14 /* 数字允许的最长位数 */
+#define PROGM_CH_MAX 5000 /*源程序的最大字符数*/
 #define ID_MAX 20 /* 标识符最大长度 */
 #define OPR_MAX 11 /* 运算符号表最大长度*/
+#define VAR_WIDTH 4 /*变量大小*/
+#define CST_WIDTH 4 /*常量大小*/
+#define SYM_ITEMS_CNT 100 // 符号表项数
+#define PROC_CNT 20 // 过程数
 
 #define NUL 0x0 /* 空 */
 #define IDENT 0x1 /* 标识符 */
@@ -93,27 +100,28 @@ using namespace std;
 #define REDUNDENT_COMMA 45
 #define REDUNDENT_SEMICOLON 49
 
-extern char ch; // 用于词法分析器，存放最近一次从文件中读出的字符
-extern unsigned long sym; // 词法分析器输出结果之用，存放最近一次识别出来的 token 的类型
-extern char strToken[ID_MAX + 1]; // 词法分析器输出结果之用，存放最近一次识别出来的标识符的名字
+// 全局变量声明
+extern char ch; // 最近一次从文件中读出的字符
+extern unsigned long sym; // 最近一次识别出来的 token 的类型
+extern char strToken[ID_MAX + 1]; // 最近一次识别出来的token的名字
 extern size_t strToken_len; // 当前token长度
-extern long num; // 词法分析器输出结果之用，存放最近一次识别出来的数字的值
-extern long col_pos; // 列指针
-extern long row_pos; // 行指针
-extern long line_lenth; // 行缓冲区长度
-extern long err; /* 出错总次数 */
-extern char line[81]; /* 行缓冲区，用于从文件读出一行，供词法分析获取单词时之用 */
-extern char a[ID_MAX + 1]; /* 词法分析器中用于临时存放正在分析的词 */
-extern fstream file;
-extern string progm;
-extern char* c_str_progm;
-extern size_t progm_lenth;
-extern size_t ch_ptr;
+extern size_t num; // 最近一次识别出来的数字的值
+extern size_t col_pos; // 列指针
+extern size_t row_pos; // 行指针
+extern size_t line_lenth; // 行缓冲区长度
+extern size_t err; // 出错总次数
+extern size_t offset; // 变量地址偏移值
+extern size_t level; //  层差
+
+extern string progm_str; // 源程序代码的string字符串形式
+extern char* progm_c_str; // 源程序代码的C字符串形式
+extern size_t progm_lenth; // 源程序代码的字符数量
+extern size_t ch_ptr; // 字符指针，指向词法分析当前读取的字符
 extern char resv_table[RSV_WORD_MAX][10]; // 保留字表
 extern char opr_table[OPR_MAX]; // 运算符号表
 extern char err_msg[65][100]; // 错误信息表
 extern unordered_map<unsigned long, string> sym_map; // 保留字编号与字符串的映射
-// first集
+// first集声明
 extern unsigned long first_block;
 extern unsigned long first_stmt;
 extern unsigned long first_factor;
@@ -121,7 +129,7 @@ extern unsigned long first_term;
 extern unsigned long first_exp;
 extern unsigned long first_lexp;
 extern unsigned long first_lop;
-// follow集
+// follow集声明
 extern unsigned long follow_condecl;
 extern unsigned long follow_vardecl;
 extern unsigned long follow_body;
@@ -138,10 +146,10 @@ enum Category {
     NIL,
     ARR,
     VAR,
-    FUN
+    FUN,
+    CST,
 };
-enum Type {};
-
+enum Type { INTERGER };
 // 函数声明
 void exp();
 void factor();
@@ -149,3 +157,4 @@ void term();
 void block();
 void body();
 void test();
+#endif
