@@ -1,25 +1,22 @@
 #include "PL0.h"
-#include "SymbolTable.h"
 #include <iomanip>
-#include <locale>
 #include <sstream>
-#include <string>
 #include <windows.h>
 
 char ch = 32; // 用于词法分析器，存放最近一次从文件中读出的字符
 unsigned long sym; // 最近一次识别出来的 token 的类型
 char strToken[ID_MAX + 1] = { 0 }; // 最近一次识别出来的标识符的名字
 size_t strToken_len = 0; // 当前token长度
-size_t num; // 词法分析器输出结果之用，存放最近一次识别出来的数字的值
-size_t col_pos = 0; // 列指针
-size_t row_pos = 1; // 行指针
-size_t line_lenth; // 行缓冲区长度
-size_t err = 0; /* 出错总次数 */
-size_t offset = 0;
-size_t level = 0; //  层差
-
-string progm_str;
-char* progm_c_str;
+long num; // 词法分析器输出结果之用，存放最近一次识别出来的数字的值
+long col_pos = 0; // 列指针
+long row_pos = 1; // 行指针
+long line_lenth; // 行缓冲区长度
+long err = 0; /* 出错总次数 */
+char line[81]; /* 行缓冲区，用于从文件读出一行，供词法分析获取单词时之用 */
+char a[ID_MAX + 1]; /* 词法分析器中用于临时存放正在分析的词 */
+fstream file;
+string progm;
+char* c_str_progm;
 size_t progm_lenth;
 size_t ch_ptr;
 unordered_map<unsigned long, string> sym_map; // 保留字编号与字符串的映射
@@ -158,102 +155,20 @@ void init()
     sym_map[ELSE_SYM] = "ELSE_SYM";
 }
 
-/*UTF8 编码格式（xxx 是用来填充二进制 Unicode 码点的）
-1字节	0xxxxxxx
-2字节	110xxxxx 10xxxxxx
-3字节	1110xxxx 10xxxxxx 10xxxxxx
-4字节	11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-有效的 Unicode 码点范围:
-0000 0000 ~ 0000 007F | 0xxxxxxx
-0000 0080 ~ 0000 07FF | 110xxxxx 10xxxxxx
-0000 0800 ~ 0000 FFFF | 1110xxxx 10xxxxxx 10xxxxxx
-0001 0000 ~ 0010 FFFF | 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-*/
-// 读取 UTF8 文件, 返回Unicode（UCS-2）字符串
-wstring readFile2USC2(string filename)
-{
-    // 打开文件
-    fstream file(PRGM_PATH, ios::in);
-    if (!file.is_open()) {
-        cout << "cannot open file!" << endl;
-        exit(0);
-    }
-    // 跳过 UTF8 BOM（0xEFBBBF）
-    if (file.get() != 0xEF || file.get() != 0xBB || file.get() != 0xBF) {
-        file.seekg(0, ios::beg);
-    }
-
-    byte B; // 1字节
-    wchar_t w_ch; // 2字节存储UCS-2码点
-    wstring w_str; // 用于存储转换结果的 Unicode 码点序列
-    int len; // 单个 UTF8 字符的编码长度
-
-    while ((B = file.get()) && !file.eof()) {
-        // 单字节编码 0xxxxxxx
-        if (B < 0b10000000) {
-            w_ch = B;
-        } // 多字节编码，获取编码长度
-        else {
-            // 超出可用 Unicode 范围
-            if (B > 0b11110100) {
-                cout << (char32_t)B << endl;
-                cout << "Invalid unicode range" << endl;
-                exit(0);
-            } // 4字节编码 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-            else if (B >= 0b11110000) {
-                len = 4;
-            }
-            // 1110xxxx 10xxxxxx 10xxxxxx
-            else if (B >= 0b11100000) {
-                len = 3;
-            }
-            // 110xxxxx 10xxxxxx
-            else if (B >= 0b11000000) {
-                len = 2;
-            } else {
-                // 除单字节外，首字节不能小于 0b11000000
-                cout << "Invalid utf8 leading code" << endl;
-                exit(0);
-            }
-            // 通过左移再右移的方法去掉首字节中的 UTF8 标记
-            B = B << (len + 1);
-            w_ch = B >> (len + 1);
-            // 处理后续字节
-            while (len > 1) {
-                B = file.get();
-                // 如果 f 到达 eof，则 c 会返回 255
-                // 后续编码必须是 0b10xxxxxx 格式
-                if (B >= 0b11000000) {
-                    cout << "Invalid utf8 tailing code" << endl;
-                    exit(0);
-                }
-                len--;
-                B = B & 0b00111111; // 去掉 UTF8 标记
-                w_ch = w_ch << 6; // 腾出 6 个 bit 的位置
-                w_ch += B; // 将去掉了 UTF8 标记的编码合并进来
-            }
-        }
-        // 存储解解析结果
-        w_str.push_back(w_ch);
-    }
-    return w_str;
-}
-
 // 读取待编译源代码文件
-void readFile2Str()
+void readFile()
 {
-    fstream file(PRGM_PATH, ios::in);
+    file.open(PRGM_PATH, ios::in);
     stringstream stream;
     if (!file.is_open()) {
         cout << "cannot open file!" << endl;
         exit(0);
-        cout << "cannot open file!" << endl;
     }
     stream << file.rdbuf() << '#';
-    progm_str = stream.str();
-    progm_lenth = progm_str.length();
-    progm_c_str = new char[progm_lenth];
-    strcpy(progm_c_str, progm_str.c_str());
+    progm = stream.str();
+    progm_lenth = progm.length();
+    c_str_progm = new char[progm_lenth];
+    strcpy(c_str_progm, progm.c_str());
 }
 
 // 打印错误信息
@@ -315,7 +230,7 @@ int isOprator(char ch)
 // 跳过所有空白符，并将读指针置于空白符下一个位置，但并不装载下一个字符
 void skipBlank()
 {
-    while (progm_c_str[ch_ptr] && progm_c_str[ch_ptr] == ' ') {
+    while (c_str_progm[ch_ptr] && c_str_progm[ch_ptr] == ' ') {
         col_pos++;
         ch_ptr++;
     }
@@ -324,14 +239,14 @@ void skipBlank()
 // 获取ch_ptr对应位置的字符，并移动读指针到下一位置。若当前字符为回车符，则跳过当前字符
 void getCh()
 {
-    ch = progm_c_str[ch_ptr++];
+    ch = c_str_progm[ch_ptr++];
     col_pos++;
 }
 
 // 退一个字符
 void retract()
 {
-    ch = progm_c_str[--ch_ptr];
+    ch = c_str_progm[--ch_ptr];
     col_pos--;
 }
 
@@ -571,17 +486,12 @@ void judge(unsigned long s1, unsigned long s2, int n)
 void constDef()
 {
     if (sym == IDENT) {
-        // 将常量登入符号表
-        SymTable::enter(strToken, offset, Type::INTERGER);
-        offset += CST_WIDTH;
         getWord();
-        // const -> id:=
-        if (sym & (BECOMES | EQL)) {
+        if (sym == BECOMES || sym == EQL) {
             if (sym == EQL) {
                 error(EXPECT_BECOMES_NOT_EQL);
             }
             getWord();
-            // const -> id:=number
             if (sym == NUMBER) {
                 getWord();
             } else {
@@ -589,7 +499,6 @@ void constDef()
             }
         }
     } else {
-        // 没有找到id则跳转到第一个constDef的follow集中的符号
         judge(0, follow_constdef, ILLEGAL_CONSTDEF);
     }
 }
@@ -601,6 +510,7 @@ void condecl()
     if (sym == CONST_SYM) {
         // const <constDef>
         getWord();
+
         constDef();
         // const <constDef> {,<constDef>}
         while (sym & (COMMA | IDENT)) {
@@ -633,9 +543,6 @@ void vardecl()
         getWord();
         // var <id>
         if (sym == IDENT) {
-            // 将标识符登入到符号表
-            SymTable::enter(strToken, VAR_WIDTH, Type::INTERGER);
-            offset += VAR_WIDTH;
             getWord();
         } else {
             judge(0, COMMA, MISSING_IDENT);
@@ -644,9 +551,6 @@ void vardecl()
         while (sym == COMMA) {
             getWord();
             if (sym == IDENT) {
-                // 将标识符登入到符号表
-                SymTable::enter(strToken, VAR_WIDTH, Type::INTERGER);
-                offset += VAR_WIDTH;
                 getWord();
             } else {
                 error(REDUNDENT_COMMA); // todo expect 标识符
@@ -666,13 +570,10 @@ void vardecl()
 // <proc> -> procedure id ([id {,id}]);<block> {;<proc>}
 void proc()
 {
-    level++;
     if (sym == PROC_SYM) {
         getWord();
         // <proc> -> procedure id
         if (sym == IDENT) {
-            // 将过程名登入符号表
-            SymTable::enterProc(strToken);
             getWord();
         } else {
             judge(0, LPAREN, MISSING_IDENT);
@@ -725,7 +626,6 @@ void proc()
     } else {
         judge(0, follow_proc, ILLEGAL_PROC);
     }
-    level--;
 }
 
 // <exp> -> [+|-] <term>{<aop><term>}
@@ -1039,7 +939,7 @@ void prog()
     }
 }
 
-void analyze()
+void grammaAnalysis()
 {
     getWord();
     prog();
@@ -1052,6 +952,6 @@ void analyze()
 void test()
 {
     init();
-    readFile2Str();
-    analyze();
+    readFile();
+    grammaAnalysis();
 }
