@@ -5,7 +5,7 @@ vector<unsigned int> SymTable::display(PROC_CNT); // 过程的嵌套层次表
 void SymTable::mkTable(unsigned int pre)
 {
 }
-void SymTable::enter(string name, char offset, Type t)
+void SymTable::enter(wstring name, size_t offset, Type t)
 {
     SymTableItem item;
     VarInfo info;
@@ -16,4 +16,4 @@ void SymTable::enter(string name, char offset, Type t)
     item.info = info;
 }
 void SymTable::addWidth(unsigned int width) { }
-void SymTable::enterProc(string name) { }
+void SymTable::enterProc(wstring name) { }

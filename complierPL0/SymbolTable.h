@@ -35,7 +35,7 @@ typedef struct SymTableItem {
     unsigned int pre_item;
 
     Information info;
-    string name; // 符号名
+    wstring name; // 符号名
 } SymTableItem;
 
 class SymTable {
@@ -46,8 +46,8 @@ public:
 
 public:
     static void mkTable(unsigned int pre);
-    static void enter(string name, char offset, Type t);
+    static void enter(wstring name, size_t offset, Type t);
     static void addWidth(unsigned int width);
-    static void enterProc(string name);
+    static void enterProc(wstring name);
 };
 #endif

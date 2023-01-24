@@ -10,7 +10,8 @@
 
 using namespace std;
 
-#define PRGM_PATH \
+#define UNICODE // 使用UNICODE字符集
+#define PROGM_PATH \
     "E:\\Programming\\GitHub\\repository\\DataStruct\\complierPL0\\test.txt"
 #define RSV_WORD_MAX 15 /* 保留字的数量 */
 #define N_MAX 14 /* 数字允许的最长位数 */
@@ -21,6 +22,7 @@ using namespace std;
 #define CST_WIDTH 4 /*常量大小*/
 #define SYM_ITEMS_CNT 100 // 符号表项数
 #define PROC_CNT 20 // 过程数
+#define ERR_CNT 70 // 报错种数
 
 #define NUL 0x0 /* 空 */
 #define IDENT 0x1 /* 标识符 */
@@ -101,9 +103,9 @@ using namespace std;
 #define REDUNDENT_SEMICOLON 49
 
 // 全局变量声明
-extern char ch; // 最近一次从文件中读出的字符
+extern wchar_t w_ch; // 最近一次从文件中读出的字符
 extern unsigned long sym; // 最近一次识别出来的 token 的类型
-extern char strToken[ID_MAX + 1]; // 最近一次识别出来的token的名字
+extern wstring strToken; // 最近一次识别出来的token的名字
 extern size_t strToken_len; // 当前token长度
 extern size_t num; // 最近一次识别出来的数字的值
 extern size_t col_pos; // 列指针
@@ -114,13 +116,13 @@ extern size_t offset; // 变量地址偏移值
 extern size_t level; //  层差
 
 extern string progm_str; // 源程序代码的string字符串形式
-extern char* progm_c_str; // 源程序代码的C字符串形式
+extern wstring progm_w_str; // 源程序代码的wchar字符串形式
 extern size_t progm_lenth; // 源程序代码的字符数量
 extern size_t ch_ptr; // 字符指针，指向词法分析当前读取的字符
-extern char resv_table[RSV_WORD_MAX][10]; // 保留字表
-extern char opr_table[OPR_MAX]; // 运算符号表
-extern char err_msg[65][100]; // 错误信息表
-extern unordered_map<unsigned long, string> sym_map; // 保留字编号与字符串的映射
+extern wstring resv_table[RSV_WORD_MAX]; // 保留字表
+extern wchar_t opr_table[OPR_MAX]; // 运算符号表
+extern wstring err_msg[ERR_CNT]; // 错误信息表
+extern unordered_map<unsigned long, wstring> sym_map; // 保留字编号与字符串的映射
 // first集声明
 extern unsigned long first_block;
 extern unsigned long first_stmt;

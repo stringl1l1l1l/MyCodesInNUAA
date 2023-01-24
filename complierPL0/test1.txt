@@ -1,4 +1,4 @@
-progra a;
+progra a；
     var a,b;
     begin
         a:=x; b:=y; z:=0;
