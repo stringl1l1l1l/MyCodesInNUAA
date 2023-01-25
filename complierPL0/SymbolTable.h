@@ -7,10 +7,12 @@
 #include <vector>
 
 using namespace std;
-class Information { };
-class VarInfo : public Information {
+class Information {
 public:
     enum Category cat; // 种属
+};
+class VarInfo : public Information {
+public:
     enum Type type; // 类型
     unsigned int size; // 占用存储单元数
     unsigned int offset; // 相对地址（偏移量）
@@ -20,7 +22,7 @@ public:
     void* extraInfo;
 };
 
-struct ProcInfo : public Information {
+class ProcInfo : public Information {
 public:
     vector<VarInfo> formVarList;
 };
@@ -33,7 +35,6 @@ struct DopeVector {
 // 符号表项
 typedef struct SymTableItem {
     unsigned int pre_item;
-
     Information info;
     wstring name; // 符号名
 } SymTableItem;
@@ -42,12 +43,20 @@ class SymTable {
 public:
     static unsigned int sp; // 指向当前子过程符号表的首地址
     static vector<SymTableItem> table; // 一个程序唯一的符号表
-    static vector<unsigned int> display; // 过程的嵌套层次表
-
+    static unsigned int display[PROC_CNT]; // 过程的嵌套层次表
 public:
-    static void mkTable(unsigned int pre);
-    static void enter(wstring name, size_t offset, Type t);
+    SymTable();
+    ~SymTable();
+    // 创建子符号表
+    static void mkTable();
+    // 将变量名登入符号表
+    static size_t enter(wstring name, size_t offset, Category cat);
     static void addWidth(unsigned int width);
-    static void enterProc(wstring name);
+    // 将过程名登入符号表
+    static size_t enterProc(wstring name);
+    // 查找符号在符号表中位置
+    static size_t position(wstring name);
 };
+
+void symTableTest();
 #endif

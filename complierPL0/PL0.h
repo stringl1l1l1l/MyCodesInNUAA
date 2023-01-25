@@ -104,7 +104,7 @@ using namespace std;
 // 全局变量声明
 extern wchar_t w_ch; // 最近一次从文件中读出的字符
 extern unsigned long sym; // 最近一次识别出来的 token 的类型
-extern wstring strToken;  // 最近一次识别出来的token的名字
+extern wstring strToken; // 最近一次识别出来的token的名字
 extern wstring err_str; // 最近一次识别出来的非法字符串的名字
 extern size_t strToken_len; // 当前token长度
 extern size_t num; // 最近一次识别出来的数字的值
@@ -145,11 +145,12 @@ extern unsigned long follow_block;
 extern unsigned long follow_constdef;
 extern unsigned long follow_proc;
 enum Category {
-    NIL,
-    ARR,
-    VAR,
-    FUN,
-    CST,
+    NIL, // 空
+    ARR, // 数组
+    VAR, // 变量
+    PROCE, // 过程
+    CST, // 常量
+    FORM, // 形参
 };
 enum Type { INTERGER };
 // 函数声明
@@ -158,5 +159,5 @@ void factor();
 void term();
 void block();
 void body();
-void test();
+void PL0Test();
 #endif

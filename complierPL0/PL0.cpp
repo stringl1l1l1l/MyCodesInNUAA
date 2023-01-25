@@ -22,6 +22,7 @@ size_t line_lenth; // 行缓冲区长度
 size_t err = 0; /* 出错总次数 */
 size_t offset = 0;
 size_t level = 0; //  层差
+size_t maxLevel = 0;
 
 string progm_str;
 wstring progm_w_str; // 源程序代码的wchar字符串形式
@@ -130,6 +131,7 @@ void init()
 {
     // 以Unicode方式打开输入输出流
     _setmode(_fileno(stdout), _O_U16TEXT);
+    SymTable::table.reserve(SYM_ITEMS_CNT);
     sym_map[NUL] = L"NUL";
     sym_map[IDENT] = L"IDENT";
     sym_map[NUMBER] = L"NUMBER";
@@ -182,7 +184,7 @@ void readFile2USC2(string filename)
     // 打开文件
     fstream file(filename, ios::in);
     if (!file.is_open()) {
-        cout << L"cannot open file!" << endl;
+        wcout << L"cannot open file!" << endl;
         exit(0);
     }
     // 跳过 UTF8 BOM（0xEFBBBF）
@@ -203,8 +205,7 @@ void readFile2USC2(string filename)
         else {
             // 超出可用 Unicode 范围
             if (B > 0b11110100) {
-                cout << B << endl;
-                cout << L"Invalid unicode range" << endl;
+                wcout << L"Invalid unicode range" << endl;
                 exit(0);
             } // 4字节编码 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
             else if (B >= 0b11110000) {
@@ -219,7 +220,7 @@ void readFile2USC2(string filename)
                 len = 2;
             } else {
                 // 除单字节外，首字节不能小于 0b11000000
-                cout << L"Invalid utf8 leading code" << endl;
+                wcout << L"Invalid utf8 leading code" << endl;
                 exit(0);
             }
             // 通过左移再右移的方法去掉首字节中的 UTF8 标记
@@ -231,7 +232,7 @@ void readFile2USC2(string filename)
                 // 如果 f 到达 eof，则 c 会返回 255
                 // 后续编码必须是 0b10xxxxxx 格式
                 if (B >= 0b11000000) {
-                    cout << L"Invalid utf8 tailing code" << endl;
+                    wcout << L"Invalid utf8 tailing code" << endl;
                     exit(0);
                 }
                 len--;
@@ -243,6 +244,7 @@ void readFile2USC2(string filename)
         // 存储解解析结果
         w_str.push_back(wchar);
     }
+    w_str.push_back(L'#');
     progm_w_str = w_str;
 }
 
@@ -284,7 +286,6 @@ void over()
     } else {
         wcout << L"\e[31mTotol: " << err << L" errors\e[0m" << endl;
     }
-    exit(0);
 }
 
 // 判断是否为数字
@@ -445,6 +446,7 @@ void getWord()
             sym = NUL;
             break;
         }
+
         retract();
     }
     // 开头为数字，判断是否为数值类型
@@ -553,10 +555,9 @@ void getWord()
             sym = NUL;
         }
     }
-    wcout << L"(" << row_pos << L"," << col_pos << L")\t" << setw(15)
-          << strToken << setw(20) << sym_map[sym] << endl;
+    // wcout << L"(" << row_pos << L"," << col_pos << L")\t" << setw(15)
+    //       << strToken << setw(20) << sym_map[sym] << endl;
     err_str.clear();
-    strToken.clear();
 }
 
 // 该函数是用来查follow集中有没有合适的符号
@@ -585,7 +586,7 @@ void constDef()
 {
     if (sym == IDENT) {
         // 将常量登入符号表
-        SymTable::enter(strToken, offset, Type::INTERGER);
+        SymTable::enter(strToken, offset, Category::CST);
         offset += CST_WIDTH;
         getWord();
         // const -> id:=
@@ -647,7 +648,7 @@ void vardecl()
         // var <id>
         if (sym == IDENT) {
             // 将标识符登入到符号表
-            SymTable::enter(strToken, VAR_WIDTH, Type::INTERGER);
+            SymTable::enter(strToken, VAR_WIDTH, Category::VAR);
             offset += VAR_WIDTH;
             getWord();
         } else {
@@ -658,7 +659,7 @@ void vardecl()
             getWord();
             if (sym == IDENT) {
                 // 将标识符登入到符号表
-                SymTable::enter(strToken, VAR_WIDTH, Type::INTERGER);
+                SymTable::enter(strToken, VAR_WIDTH, Category::VAR);
                 offset += VAR_WIDTH;
                 getWord();
             } else {
@@ -680,12 +681,15 @@ void vardecl()
 void proc()
 {
     level++;
+    if (level > maxLevel)
+        maxLevel = level;
     if (sym == PROC_SYM) {
         getWord();
         // <proc> -> procedure id
         if (sym == IDENT) {
             // 将过程名登入符号表
             SymTable::enterProc(strToken);
+            SymTable::mkTable();
             getWord();
         } else {
             judge(0, LPAREN, MISSING_IDENT);
@@ -698,10 +702,14 @@ void proc()
         }
         // <proc> -> procedure id ([id {,id}]
         if (sym == IDENT) {
+            SymTable::enter(strToken, VAR_WIDTH, Category::FORM);
+            offset += VAR_WIDTH;
             getWord();
             while (sym == COMMA) {
                 getWord();
                 if (sym == IDENT) {
+                    SymTable::enter(strToken, VAR_WIDTH, Category::FORM);
+                    offset += VAR_WIDTH;
                     getWord();
                 } else {
                     error(REDUNDENT_COMMA);
@@ -723,6 +731,7 @@ void proc()
         // <proc> -> procedure id ([id {,id}]);<block> {;<proc>}
         if (sym & first_block) {
             block();
+            level--;
             while (sym == SEMICOLON) {
                 getWord();
                 // FIRST(proc)
@@ -738,7 +747,6 @@ void proc()
     } else {
         judge(0, follow_proc, ILLEGAL_PROC);
     }
-    level--;
 }
 
 // <exp> -> [+|-] <term>{<aop><term>}
@@ -1018,6 +1026,9 @@ void prog()
 
     // <prog> -> program id
     if (sym == IDENT) {
+        // 将过程名登入符号表
+        SymTable::enterProc(strToken);
+        SymTable::mkTable();
         getWord();
     }
     // 错误 <prog> -> program number
@@ -1062,7 +1073,7 @@ void analyze()
     over();
 }
 
-void test()
+void PL0Test()
 {
     init();
     readFile2USC2(PROGM_PATH);

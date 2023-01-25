@@ -1,5 +1,7 @@
 #include "PL0.h"
+#include "SymbolTable.h"
 int main()
 {
-    test();
+    PL0Test();
+    symTableTest();
 }
