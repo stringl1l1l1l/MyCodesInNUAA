@@ -1,6 +1,6 @@
 program a;
 const m:=7, n:=85;
-var x,y,z,q,r,f;
+var x,y,z,q,r;
 procedure multiply(x,y,z);
     var a,b;
     begin
@@ -29,6 +29,7 @@ procedure divide(x,y,q,r);
     end;
 
 procedure gcd(x,y);
+
     var f,g;
     begin
         f:=x;

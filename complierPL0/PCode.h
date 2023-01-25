@@ -19,7 +19,7 @@ enum Function {
 
 struct PCode {
     Function function; // 伪操作码
-    unsigned int level; // 层差
+    unsigned int L; // 层差
     unsigned int addr; // 相对地址
 };
 

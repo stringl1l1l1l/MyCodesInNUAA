@@ -2,14 +2,16 @@
 #define _SYMBOL_TABLE_H
 
 #include "PL0.h"
+#include <map>
 #include <string>
-#include <type_traits>
+#include <vcruntime.h>
 #include <vector>
 
 using namespace std;
 class Information {
 public:
     enum Category cat; // 种属
+    size_t level;
 };
 class VarInfo : public Information {
 public:
@@ -18,7 +20,6 @@ public:
     unsigned int offset; // 相对地址（偏移量）
     bool isFormVar; // 是否为形参的标记
     bool hasAssigned; // 是否进行过赋值的标记
-    unsigned int level;
     void* extraInfo;
 };
 
@@ -41,21 +42,22 @@ typedef struct SymTableItem {
 
 class SymTable {
 public:
-    static unsigned int sp; // 指向当前子过程符号表的首地址
+    static size_t sp; // 指向当前子过程符号表的首地址
     static vector<SymTableItem> table; // 一个程序唯一的符号表
-    static unsigned int display[PROC_CNT]; // 过程的嵌套层次表
+    static vector<size_t> display; // 过程的嵌套层次表
+    static vector<size_t> proc_addrs;
 public:
     SymTable();
     ~SymTable();
     // 创建子符号表
     static void mkTable();
     // 将变量名登入符号表
-    static size_t enter(wstring name, size_t offset, Category cat);
+    static int enter(wstring name, size_t offset, Category cat);
     static void addWidth(unsigned int width);
     // 将过程名登入符号表
-    static size_t enterProc(wstring name);
+    static int enterProc(wstring name);
     // 查找符号在符号表中位置
-    static size_t position(wstring name);
+    static int position(wstring name);
 };
 
 void symTableTest();

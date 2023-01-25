@@ -20,7 +20,7 @@ using namespace std;
 #define VAR_WIDTH 4 /*变量大小*/
 #define CST_WIDTH 4 /*常量大小*/
 #define SYM_ITEMS_CNT 100 // 符号表项数
-#define PROC_CNT 20 // 过程数
+#define PROC_CNT 40 // 过程嵌套数
 #define ERR_CNT 70 // 报错种数
 
 #define NUL 0x0 /* 空 */
@@ -101,6 +101,8 @@ using namespace std;
 #define REDUNDENT_COMMA 45
 #define REDUNDENT_SEMICOLON 49
 
+#define UNDECLARED_IDENT 11
+#define REDEFINED_IDENT 61
 // 全局变量声明
 extern wchar_t w_ch; // 最近一次从文件中读出的字符
 extern unsigned long sym; // 最近一次识别出来的 token 的类型
@@ -160,4 +162,5 @@ void term();
 void block();
 void body();
 void PL0Test();
+void error(size_t n);
 #endif

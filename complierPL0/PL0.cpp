@@ -64,67 +64,35 @@ wchar_t opr_table[OPR_MAX] = { L'+', L'-', L'*', L'/', L'=', L'<',
 
 // 错误信息表
 wstring err_msg[ERR_CNT] = {
-    L"Missing 'program'",
-    L"Found '=' when expecting ':='.",
+    L"Missing 'program'", L"Found '=' when expecting ':='.",
     L"There must be a number to follow '='.",
     L"There must be an '=' to follow the identifier.",
     L"There must be an identifier to follow 'const', 'var', or 'procedure'.",
-    L"Missing ';'",
-    L"Incorrect procedure name.",
-    L"Statement expected.",
-    L"Follow the statement is an incorrect symbol.",
-    L"'.' expected.",
-    L"';' expected.",
-    L"Undeclared identifier.",
-    L"Illegal assignment.",
-    L"':=' expected.",
-    L"There must be an identifier to follow the 'call'.",
-    L"A constant or variable can not be called.",
-    L"'then' expected.",
-    L"';' or 'end' expected.",
-    L"'do' expected.",
-    L"Incorrect symbol.",
+    L"Missing ';'", L"Incorrect procedure name.", L"Statement expected.",
+    L"Follow the statement is an incorrect symbol.", L"'.' expected.",
+    L"';' expected.", L"Undeclared identifier.", L"Illegal assignment.",
+    L"':=' expected.", L"There must be an identifier to follow the 'call'.",
+    L"A constant or variable can not be called.", L"'then' expected.",
+    L"';' or 'end' expected.", L"'do' expected.", L"Incorrect symbol.",
     L"Relative operators expected.",
-    L"Procedure identifier can not be in an expression.",
-    L"Missing ')'.",
+    L"Procedure identifier can not be in an expression.", L"Missing ')'.",
     L"The symbol can not be followed by a factor.",
-    L"The symbol can not be as the beginning of an expression.",
-    L"Missing ",
-    L"Redundent word",
-    L"Expression expected",
-    L"Missing identifier",
-    L"Find number when identifier expected",
-    L"Illegal ",
-    L"The number is too great.",
-    L"There are too many levels.",
-    L"Illegal identifier",
-    L"Missing '='",
-    L"Illegal character: ",
-    L"Missing 'begin'",
-    L"Missing 'end'",
-    L"Find ',' when expecting ';'",
-    L"Missing ':='",
-    L"Illegel word",
-    L"Missing ','",
-    L"Missing 'const'",
-    L"Missing '('",
-    L"Missing ')'",
-    L"Missing ','",
-    L"Illegal expression",
-    L"Illegal factor",
-    L"Illegal block",
-    L"Redundent ';'",
-    L"Illegal const definition",
-    L"Illegal",
-    L"Missing 'then'",
-    L"Missing '<' or '<=' or '>' or '>=' or '<>' or '='",
-    L"Missing 'do'",
-    L"Illegal const declaration",
-    L"Illegal procedure definition",
-    L"Illegal term definition",
-    L"Illegal lexp definition",
+    L"The symbol can not be as the beginning of an expression.", L"Missing ",
+    L"Redundent word", L"Expression expected", L"Missing identifier",
+    L"Find number when identifier expected", L"Illegal ",
+    L"The number is too great.", L"There are too many levels.",
+    L"Illegal identifier", L"Missing '='", L"Illegal character: ",
+    L"Missing 'begin'", L"Missing 'end'", L"Find ',' when expecting ';'",
+    L"Missing ':='", L"Illegel word", L"Missing ','", L"Missing 'const'",
+    L"Missing '('", L"Missing ')'", L"Missing ','", L"Illegal expression",
+    L"Illegal factor", L"Illegal block", L"Redundent ';'",
+    L"Illegal const definition", L"Illegal", L"Missing 'then'",
+    L"Missing '<' or '<=' or '>' or '>=' or '<>' or '='", L"Missing 'do'",
+    L"Illegal const declaration", L"Illegal procedure definition",
+    L"Illegal term definition", L"Illegal lexp definition",
     L"Illegal statement definition",
-    L"Redundent words when program should done"
+    L"Redundent words when program should done",
+    L"Redefined identifier"
 };
 
 void init()
@@ -132,6 +100,7 @@ void init()
     // 以Unicode方式打开输入输出流
     _setmode(_fileno(stdout), _O_U16TEXT);
     SymTable::table.reserve(SYM_ITEMS_CNT);
+    SymTable::display.resize(PROC_CNT);
     sym_map[NUL] = L"NUL";
     sym_map[IDENT] = L"IDENT";
     sym_map[NUMBER] = L"NUMBER";
@@ -269,8 +238,8 @@ void readFile2USC2(string filename)
 void error(size_t n)
 {
     wstring msg = err_msg[n];
-    if (n == ILLEGAL_CHAR)
-        msg += err_str;
+
+    msg = msg + L": " + strToken;
     err++;
     wcout << L"\e[31m(" << row_pos << "," << col_pos - strToken_len + 1 << L")"
           << L" Error: "
@@ -681,15 +650,13 @@ void vardecl()
 void proc()
 {
     level++;
-    if (level > maxLevel)
-        maxLevel = level;
     if (sym == PROC_SYM) {
         getWord();
         // <proc> -> procedure id
         if (sym == IDENT) {
             // 将过程名登入符号表
-            SymTable::enterProc(strToken);
             SymTable::mkTable();
+            SymTable::enterProc(strToken);
             getWord();
         } else {
             judge(0, LPAREN, MISSING_IDENT);
@@ -1027,8 +994,8 @@ void prog()
     // <prog> -> program id
     if (sym == IDENT) {
         // 将过程名登入符号表
-        SymTable::enterProc(strToken);
         SymTable::mkTable();
+        SymTable::enterProc(strToken);
         getWord();
     }
     // 错误 <prog> -> program number
