@@ -7,6 +7,7 @@
 #include <sstream>
 #include <stdio.h>
 #include <string>
+#include <tchar.h>
 #include <windows.h>
 
 wchar_t w_ch = 32; // 用于词法分析器，存放最近一次从文件中读出的字符
@@ -129,7 +130,6 @@ void init()
 {
     // 以Unicode方式打开输入输出流
     _setmode(_fileno(stdout), _O_U16TEXT);
-    // setlocale(LC_ALL, "zh_CH.UTF-8");
     sym_map[NUL] = L"NUL";
     sym_map[IDENT] = L"IDENT";
     sym_map[NUMBER] = L"NUMBER";
@@ -243,7 +243,6 @@ void readFile2USC2(string filename)
         // 存储解解析结果
         w_str.push_back(wchar);
     }
-    w_str.push_back(L'#');
     progm_w_str = w_str;
 }
 
