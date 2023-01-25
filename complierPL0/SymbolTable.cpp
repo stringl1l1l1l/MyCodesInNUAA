@@ -1,7 +1,6 @@
 #include "SymbolTable.h"
 #include <iomanip>
 #include <map>
-#include <vcruntime.h>
 size_t SymTable::sp = 1;
 vector<SymTableItem> SymTable::table; // 一个程序唯一的符号表
 vector<size_t> SymTable::display(PROC_CNT, -1); // 过程的嵌套层次表
@@ -21,7 +20,7 @@ int SymTable::enter(wstring name, size_t offset, Category cat)
     if (pos != -1 && table[pos].info.level == level
         && table[pos].info.cat != Category::FORM) {
         error(REDEFINED_IDENT);
-        return 0;
+        return -1;
     }
     size_t top = table.size();
     if (top >= 1)
@@ -43,15 +42,15 @@ void SymTable::addWidth(unsigned int width) { }
 
 int SymTable::enterProc(wstring name)
 {
-    // 若在相同作用域内有重复
+    // 若在相同作用域内有重复过程名
     int pos = -1;
-    for (int i = 0; i < level; i++) {
-        if (table[display[i]].name == name) {
-            pos = display[i];
-            break;
+    for (auto addr : proc_addrs) {
+        if (table[addr].info.level == level
+            && table[addr].name == name) {
+            pos = addr;
         }
     }
-    if (pos != -1 && table[pos].info.level == level) {
+    if (pos != -1) {
         error(REDEFINED_IDENT);
         return -1;
     }
@@ -65,6 +64,7 @@ int SymTable::enterProc(wstring name)
 
     item.info = info;
     table.push_back(item);
+    proc_addrs.push_back(top);
     return top;
 }
 

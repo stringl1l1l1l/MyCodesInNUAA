@@ -11,7 +11,7 @@
 using namespace std;
 
 #define PROGM_PATH \
-    "E:\\Programming\\GitHub\\repository\\DataStruct\\complierPL0\\test.txt"
+    "E:\\Programming\\GitHub\\repository\\DataStruct\\complierPL0\\test2.txt"
 #define RSV_WORD_MAX 15 /* 保留字的数量 */
 #define N_MAX 14 /* 数字允许的最长位数 */
 #define PROGM_CH_MAX 5000 /*源程序的最大字符数*/

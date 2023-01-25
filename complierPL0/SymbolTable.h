@@ -4,7 +4,6 @@
 #include "PL0.h"
 #include <map>
 #include <string>
-#include <vcruntime.h>
 #include <vector>
 
 using namespace std;
