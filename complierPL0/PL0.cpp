@@ -90,7 +90,7 @@ void init()
     sym_map[RPAREN] = L"RPAREN";
     sym_map[COMMA] = L"COMMA";
     sym_map[SEMICOLON] = L"SEMICOLON";
-    sym_map[BECOMES] = L"BECOMES";
+    sym_map[ASSIGN] = L"BECOMES";
     sym_map[BEGIN_SYM] = L"BEGIN_SYM";
     sym_map[END_SYM] = L"END_SYM";
     sym_map[IF_SYM] = L"IF_SYM";
@@ -460,7 +460,7 @@ void getWord()
         if (w_ch == L'=') {
             contract();
             pre_word_col++;
-            sym = BECOMES;
+            sym = ASSIGN;
         } else {
             error(MISSING, L"'='");
             strToken.clear();
@@ -593,7 +593,7 @@ void constDef()
         offset += CST_WIDTH;
         getWord();
         // const -> id:=
-        if (sym & (BECOMES | EQL)) {
+        if (sym & (ASSIGN | EQL)) {
             if (sym == EQL) {
                 error(EXPECT_BECOMES_NOT_EQL);
             }
@@ -848,7 +848,7 @@ void statement()
     // <statement> -> id := <exp>
     case IDENT:
         getWord();
-        if (sym == BECOMES) {
+        if (sym == ASSIGN) {
             getWord();
         } else if (sym == EQL) {
             error(EXPECT_BECOMES_NOT_EQL);

@@ -47,7 +47,7 @@ using namespace std;
 #define RPAREN 0x4000 /* ) */
 #define COMMA 0x8000 /* , */
 #define SEMICOLON 0x10000 /* ; */
-#define BECOMES 0x20000 /*:=*/
+#define ASSIGN 0x20000 /*:=*/
 
 #define BEGIN_SYM 0x40000
 #define END_SYM 0x80000
