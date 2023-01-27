@@ -9,6 +9,7 @@
 #include <string>
 #include <tchar.h>
 #include <windows.h>
+#include <winuser.h>
 
 wchar_t w_ch = 32; // 用于词法分析器，存放最近一次从文件中读出的字符
 unsigned long sym; // 最近一次识别出来的 token 的类型
@@ -29,6 +30,7 @@ wstring progm_w_str; // 源程序代码的wchar字符串形式
 size_t progm_lenth;
 size_t ch_ptr;
 unordered_map<unsigned long, wstring> sym_map; // 保留字编号与字符串的映射
+wstring err_msg[ERR_CNT]; // 错误信息表
 
 // first集
 unsigned long first_block = CONST_SYM | VAR_SYM | PROC_SYM | BEGIN_SYM;
@@ -61,46 +63,13 @@ wstring resv_table[RSV_WORD_MAX] = {
 // 运算符号表
 wchar_t opr_table[OPR_MAX] = { L'+', L'-', L'*', L'/', L'=', L'<',
     L'>', L'(', L')', L',', L';' };
-
-// 错误信息表
-wstring err_msg[ERR_CNT] = {
-    L"Missing 'program'", L"Found '=' when expecting ':='.",
-    L"There must be a number to follow '='.",
-    L"There must be an '=' to follow the identifier.",
-    L"There must be an identifier to follow 'const', 'var', or 'procedure'.",
-    L"Missing ';'", L"Incorrect procedure name.", L"Statement expected.",
-    L"Follow the statement is an incorrect symbol.", L"'.' expected.",
-    L"';' expected.", L"Undeclared identifier.", L"Illegal assignment.",
-    L"':=' expected.", L"There must be an identifier to follow the 'call'.",
-    L"A constant or variable can not be called.", L"'then' expected.",
-    L"';' or 'end' expected.", L"'do' expected.", L"Incorrect symbol.",
-    L"Relative operators expected.",
-    L"Procedure identifier can not be in an expression.", L"Missing ')'.",
-    L"The symbol can not be followed by a factor.",
-    L"The symbol can not be as the beginning of an expression.", L"Missing ",
-    L"Redundent word", L"Expression expected", L"Missing identifier",
-    L"Find number when identifier expected", L"Illegal ",
-    L"The number is too great.", L"There are too many levels.",
-    L"Illegal identifier", L"Missing '='", L"Illegal character: ",
-    L"Missing 'begin'", L"Missing 'end'", L"Find ',' when expecting ';'",
-    L"Missing ':='", L"Illegel word", L"Missing ','", L"Missing 'const'",
-    L"Missing '('", L"Missing ')'", L"Missing ','", L"Illegal expression",
-    L"Illegal factor", L"Illegal block", L"Redundent ';'",
-    L"Illegal const definition", L"Illegal", L"Missing 'then'",
-    L"Missing '<' or '<=' or '>' or '>=' or '<>' or '='", L"Missing 'do'",
-    L"Illegal const declaration", L"Illegal procedure definition",
-    L"Illegal term definition", L"Illegal lexp definition",
-    L"Illegal statement definition",
-    L"Redundent words when program should done",
-    L"Redefined identifier"
-};
-
 void init()
 {
     // 以Unicode方式打开输入输出流
     _setmode(_fileno(stdout), _O_U16TEXT);
     SymTable::table.reserve(SYM_ITEMS_CNT);
     SymTable::display.resize(PROC_CNT);
+    // 符号名表初始化
     sym_map[NUL] = L"NUL";
     sym_map[IDENT] = L"IDENT";
     sym_map[NUMBER] = L"NUMBER";
@@ -134,6 +103,34 @@ void init()
     sym_map[READ_SYM] = L"READ_SYM";
     sym_map[PROGM_SYM] = L"PROGM_SYM";
     sym_map[ELSE_SYM] = L"ELSE_SYM";
+    // 报错信息初始化
+    // missing错误
+    err_msg[MISSING] = L"Missing %s";
+    // redefined错误
+    err_msg[REDEFINED_IDENT] = L"Redefined identifier %s";
+    // illegal错误
+    err_msg[ILLEGAL_WORD] = L"Illegal word %s";
+    err_msg[ILLEGAL_EXP] = L"Illegal exp definition";
+    err_msg[ILLEGAL_FACTOR] = L"Illegal factor definition";
+    err_msg[ILLEGAL_BLOCK] = L"Illegal block definition";
+    err_msg[ILLEGAL_CONSTDEF] = L"Illegal const definition";
+    err_msg[ILLEGAL_VARDECL] = L"Illegal var definition";
+    err_msg[ILLEGAL_CONDECL] = L"Illegal condecl definition";
+    err_msg[ILLEGAL_PROC] = L"Illegal procedure definition";
+    err_msg[ILLEGAL_TERM] = L"Illegal term definition";
+    err_msg[ILLEGAL_LEXP] = L"Illegal lexp definition";
+    err_msg[ILLEGAL_STMT] = L"Illegal statment definition";
+    // expect错误
+    err_msg[EXPECT_BECOMES_NOT_EQL] = L"Found '=' when expecting ':='";
+    err_msg[EXPECT_NUMEBR_AFTER_BECOMES] = L"There must be a number to follow '='";
+    err_msg[EXPECT_STATEMENT] = L"Expecting statement";
+    err_msg[EXPECT_EXPRESSION] = L"Expecting expression";
+    err_msg[EXPECT_CONST] = L"Expecting const";
+    err_msg[EXPECT_IDENT_FIND_NUM] = L"Find number when identifier expected";
+    err_msg[EXPECT_SEMICOLON_FIND_COMMA] = L"Found ',' when ';' expected";
+    // redundant错误
+    err_msg[REDUNDENT] = L"Redundent %s";
+    err_msg[REDUNDENT_WORD] = L"Redundent words when program should done";
 }
 
 /*UTF8 编码格式（xxx 是用来填充二进制 Unicode 码点的）
@@ -235,15 +232,24 @@ void readFile2USC2(string filename)
 // }
 
 // 打印错误信息
-void error(size_t n)
+void error(size_t n, const wchar_t* extra)
 {
-    wstring msg = err_msg[n];
-
-    msg = msg + L": " + strToken;
+    wchar_t msg[200];
+    wsprintf(msg, err_msg[n].c_str(), extra);
     err++;
     wcout << L"\e[31m(" << row_pos << "," << col_pos - strToken_len + 1 << L")"
           << L" Error: "
           << msg
+          << L"\e[0m " << endl;
+}
+
+void error(size_t n)
+{
+
+    err++;
+    wcout << L"\e[31m(" << row_pos << "," << col_pos - strToken_len + 1 << L")"
+          << L" Error: "
+          << err_msg[n]
           << L"\e[0m " << endl;
 }
 
@@ -426,7 +432,7 @@ void getWord()
         }
         // 遇到字母
         if (isLetter(w_ch)) {
-            error(ILLEGAL_ID);
+            error(ILLEGAL_WORD, strToken.c_str());
             // 跳过错误至下一个终止符
             while (!isTerminate(w_ch))
                 getCh();
@@ -447,7 +453,7 @@ void getWord()
             contract();
             sym = BECOMES;
         } else {
-            error(MISSING_EQL);
+            error(MISSING, L"'='");
             strToken.clear();
             sym = NUL;
         }
@@ -519,18 +525,17 @@ void getWord()
             }
         } else {
             contract();
-            err_str += w_ch;
-            error(ILLEGAL_CHAR);
+            error(ILLEGAL_WORD, strToken.c_str());
             sym = NUL;
         }
     }
-    // wcout << L"(" << row_pos << L"," << col_pos << L")\t" << setw(15)
-    //       << strToken << setw(20) << sym_map[sym] << endl;
+    wcout << L"(" << row_pos << L"," << col_pos << L")\t" << setw(15)
+          << strToken << setw(20) << sym_map[sym] << endl;
     err_str.clear();
 }
 
-// 该函数是用来查follow集中有没有合适的符号
-void judge(unsigned long s1, unsigned long s2, int n)
+// 当前符号不在s1中，则循环查找下一个在中s1 ∪ s2的符号，，一般来说，s2是follow集
+void judge(unsigned long s1, unsigned long s2, size_t n)
 {
     if (!(sym & s1)) // 当前符号不在s1中
     {
@@ -548,7 +553,24 @@ void judge(unsigned long s1, unsigned long s2, int n)
     } else
         getWord();
 }
+void judge(unsigned long s1, unsigned long s2, size_t n, const wchar_t* extra)
+{
+    if (!(sym & s1)) // 当前符号不在s1中
+    {
+        error(n, extra);
+        unsigned long s3 = s1 | s2; // 把s2补充进s1
 
+        while (!(sym & s3)) // 循环找到下一个合法的符号
+        {
+            if (w_ch == L'\0')
+                over();
+            getWord(); // 继续词法分析
+        }
+        if (sym & s1)
+            getWord();
+    } else
+        getWord();
+}
 // 开始语法分析
 // const -> id:=number
 void constDef()
@@ -587,12 +609,12 @@ void condecl()
         constDef();
         // const <constDef> {,<constDef>}
         while (sym & (COMMA | IDENT)) {
-            judge(COMMA, IDENT, MISSING_COMMA);
+            judge(COMMA, IDENT, MISSING, L"','");
             if (sym == IDENT) // FIRST(<constDef>)
             {
                 constDef();
             } else {
-                judge(0, IDENT, REDUNDENT_WORD); // todo expect常量定义式
+                judge(0, IDENT, EXPECT_CONST); // todo expect常量定义式
                 constDef();
             }
         }
@@ -601,7 +623,7 @@ void condecl()
             getWord();
             return;
         } else {
-            judge(0, follow_condecl, MISSING_SEMICOLON); // todo expect ;
+            judge(0, follow_condecl, MISSING, L"';'"); // todo expect ;
         }
     } else {
         judge(0, follow_condecl, ILLEGAL_CONDECL);
@@ -621,7 +643,7 @@ void vardecl()
             offset += VAR_WIDTH;
             getWord();
         } else {
-            judge(0, COMMA, MISSING_IDENT);
+            judge(0, COMMA, MISSING, L"identifier");
         }
         // var <id>{,<id>}
         while (sym == COMMA) {
@@ -632,14 +654,14 @@ void vardecl()
                 offset += VAR_WIDTH;
                 getWord();
             } else {
-                error(REDUNDENT_COMMA); // todo expect 标识符
+                error(REDUNDENT, L"','"); // todo expect 标识符
             }
         }
         // var <id>{,<id>};
         if (sym == SEMICOLON) {
             getWord();
         } else {
-            judge(0, follow_vardecl, MISSING_SEMICOLON);
+            judge(0, follow_vardecl, MISSING, L"';'");
         }
     } else {
         judge(0, follow_vardecl, ILLEGAL_VARDECL);
@@ -659,13 +681,13 @@ void proc()
             SymTable::enterProc(strToken);
             getWord();
         } else {
-            judge(0, LPAREN, MISSING_IDENT);
+            judge(0, LPAREN, MISSING, L"identifier");
         }
         // <proc> -> procedure id (
         if (sym == LPAREN) {
             getWord();
         } else {
-            judge(0, IDENT | RPAREN, MISSING_LPAREN);
+            judge(0, IDENT | RPAREN, MISSING, L"'('");
         }
         // <proc> -> procedure id ([id {,id}]
         if (sym == IDENT) {
@@ -679,7 +701,7 @@ void proc()
                     offset += VAR_WIDTH;
                     getWord();
                 } else {
-                    error(REDUNDENT_COMMA);
+                    error(REDUNDENT, L"','");
                 }
             }
         }
@@ -687,13 +709,13 @@ void proc()
         if (sym == RPAREN) {
             getWord();
         } else {
-            judge(0, SEMICOLON, MISSING_RPAREN);
+            judge(0, SEMICOLON, MISSING, L"')'");
         }
         // <proc> -> procedure id ([id {,id}]);
         if (sym == SEMICOLON) {
             getWord();
         } else {
-            judge(0, first_block, MISSING_SEMICOLON);
+            judge(0, first_block, MISSING, L"';'");
         }
         // <proc> -> procedure id ([id {,id}]);<block> {;<proc>}
         if (sym & first_block) {
@@ -705,7 +727,7 @@ void proc()
                 if (sym == PROC_SYM) {
                     proc();
                 } else {
-                    error(REDUNDENT_SEMICOLON);
+                    error(REDUNDENT, L"';'");
                 }
             }
         } else {
@@ -756,7 +778,7 @@ void factor()
         if (sym == RPAREN) {
             getWord();
         } else {
-            judge(0, follow_factor, MISSING_RPAREN);
+            judge(0, follow_factor, MISSING, L"')'");
         }
     } else {
         judge(0, follow_factor, ILLEGAL_FACTOR);
@@ -800,7 +822,7 @@ void lexp()
             getWord();
             exp();
         } else {
-            judge(0, first_exp, MISSING_LOP);
+            judge(0, first_exp, MISSING, L"'<' or '<=' or '>' or '>=' or '<>' or '='");
             exp();
         }
     } else {
@@ -820,7 +842,7 @@ void statement()
             error(EXPECT_BECOMES_NOT_EQL);
             getWord();
         } else {
-            judge(0, follow_exp, MISSING_BEACOMES);
+            judge(0, follow_exp, MISSING, L"':='");
         }
         exp();
         break;
@@ -831,7 +853,7 @@ void statement()
         if (sym == THEN_SYM) {
             getWord();
         } else {
-            judge(0, first_stmt, MISSING_THEN);
+            judge(0, first_stmt, MISSING, L"then");
         }
 
         statement();
@@ -849,7 +871,7 @@ void statement()
             getWord();
             statement();
         } else {
-            judge(0, first_stmt, MISSING_DO);
+            judge(0, first_stmt, MISSING, L"do");
         }
         break;
     // <statement> -> call id ([{<exp>{,<exp>}])
@@ -858,12 +880,12 @@ void statement()
         if (sym == IDENT) {
             getWord();
         } else {
-            judge(0, LPAREN, MISSING_IDENT);
+            judge(0, LPAREN, MISSING, L"identifier");
         }
         if (sym == LPAREN) {
             getWord();
         } else {
-            judge(0, first_exp | RPAREN, MISSING_LPAREN);
+            judge(0, first_exp | RPAREN, MISSING, L"'('");
         }
         if (sym & first_exp) {
             exp();
@@ -872,7 +894,7 @@ void statement()
                 if (sym & first_exp) {
                     exp();
                 } else {
-                    judge(0, first_exp, REDUNDENT_COMMA);
+                    judge(0, first_exp, REDUNDENT, L"','");
                     exp();
                 }
             }
@@ -892,12 +914,12 @@ void statement()
         if (sym == LPAREN) {
             getWord();
         } else {
-            judge(0, IDENT, MISSING_LPAREN);
+            judge(0, IDENT, MISSING, L"'('");
         }
         if (sym == IDENT) {
             getWord();
         } else {
-            judge(0, COMMA | RPAREN, MISSING_IDENT);
+            judge(0, COMMA | RPAREN, MISSING, L"identifier");
         }
         while (sym == COMMA) {
             getWord();
@@ -910,7 +932,7 @@ void statement()
         if (sym == RPAREN) {
             getWord();
         } else {
-            judge(0, follow_stmt, MISSING_RPAREN);
+            judge(0, follow_stmt, MISSING, L"')'");
         }
         break;
     // <statement> -> write(<exp> {,<exp>})
@@ -919,20 +941,20 @@ void statement()
         if (sym == LPAREN) {
             getWord();
         } else {
-            judge(0, first_exp, MISSING_LPAREN);
+            judge(0, first_exp, MISSING, L"'('");
         }
         exp();
         while (sym == COMMA) {
             getWord();
             if (sym == RPAREN)
-                error(REDUNDENT_COMMA);
+                error(REDUNDENT, L"','");
             else
                 exp();
         }
         if (sym == RPAREN) {
             getWord();
         } else {
-            judge(0, follow_stmt, MISSING_RPAREN);
+            judge(0, follow_stmt, MISSING, L"')'");
         }
 
         break;
@@ -946,7 +968,7 @@ void statement()
 void body()
 {
     // 判断是否存在begin,是否仅缺少begin
-    judge(BEGIN_SYM, first_stmt, MISSING_BEGIN);
+    judge(BEGIN_SYM, first_stmt, MISSING, L"begin");
     statement();
     // 这里如果end前多一个分号会多进行一次循环，并进入else分支
     while (sym & (SEMICOLON | COMMA | first_stmt)) {
@@ -955,7 +977,7 @@ void body()
             error(EXPECT_SEMICOLON_FIND_COMMA);
             getWord();
         } else
-            judge(SEMICOLON, first_stmt, MISSING_SEMICOLON);
+            judge(SEMICOLON, first_stmt, MISSING, L"';'");
         if (sym & first_stmt) {
             statement();
         } else {
@@ -963,7 +985,7 @@ void body()
         }
     }
     // 判断是否缺少end
-    judge(END_SYM, 0, MISSING_END);
+    judge(END_SYM, 0, MISSING, L"end");
 }
 
 // <block> -> [<condecl>][<vardecl>][<proc>]<body>
@@ -989,7 +1011,7 @@ void block()
 void prog()
 {
     // 找到第一次出现的program
-    judge(PROGM_SYM, 0, MISSING_PROGM);
+    judge(PROGM_SYM, 0, MISSING, L"program");
 
     // <prog> -> program id
     if (sym == IDENT) {
@@ -1005,11 +1027,11 @@ void prog()
     }
     // 缺失 <prog> -> program ;
     else if (sym == SEMICOLON) {
-        error(MISSING_IDENT);
+        error(MISSING, L"identifier");
     }
     //  <prog> -> program {~id} ;
     else {
-        error(ILLEGAL_WORD);
+        error(ILLEGAL_WORD, strToken.c_str());
         getWord();
     }
     // <prog> -> program id;
@@ -1019,7 +1041,7 @@ void prog()
     // <prog> -> program id {~';'} <block>
     else {
         // 判断是否仅仅是缺失分号
-        judge(SEMICOLON, first_block, MISSING_SEMICOLON);
+        judge(SEMICOLON, first_block, MISSING, L"';'");
     }
     //<prog> -> program id; <block>
     block();

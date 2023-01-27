@@ -7,11 +7,17 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#ifndef UNICODE
+#define UNICODE
+#endif
 
+#ifndef _UNICODE
+#define _UNICODE
+#endif
 using namespace std;
 
 #define PROGM_PATH \
-    "E:\\Programming\\GitHub\\repository\\DataStruct\\complierPL0\\test2.txt"
+    "E:\\Programming\\GitHub\\repository\\DataStruct\\complierPL0\\test.txt"
 #define RSV_WORD_MAX 15 /* 保留字的数量 */
 #define N_MAX 14 /* 数字允许的最长位数 */
 #define PROGM_CH_MAX 5000 /*源程序的最大字符数*/
@@ -62,13 +68,10 @@ using namespace std;
 #define EXPECT_NUMEBR_AFTER_BECOMES 2
 #define EXPECT_STATEMENT 7
 #define EXPECT_EXPRESSION 27
+#define EXPECT_CONST 50
 #define EXPECT_IDENT_FIND_NUM 29
 #define EXPECT_SEMICOLON_FIND_COMMA 38
 
-#define ILLEGAL 30
-#define ILLEGAL_ID 33
-#define ILLEGAL_CHAR 35
-#define INCORRECT_PROC_NAME 6
 #define ILLEGAL_WORD 40
 #define ILLEGAL_EXP 46
 #define ILLEGAL_FACTOR 47
@@ -82,27 +85,12 @@ using namespace std;
 #define ILLEGAL_STMT 59
 
 #define MISSING 25
-#define MISSING_EQL 34
-#define MISSING_PROGM 0
-#define MISSING_SEMICOLON 5
-#define MISSING_IDENT 28
-#define MISSING_BEGIN 36
-#define MISSING_END 37
-#define MISSING_BEACOMES 39
-#define MISSING_COMMA 41
-#define MISSING_CONST 42
-#define MISSING_LPAREN 43
-#define MISSING_RPAREN 44
-#define MISSING_THEN 52
-#define MISSING_LOP 53
-#define MISSING_DO 54
 
-#define REDUNDENT_WORD 26
-#define REDUNDENT_COMMA 45
-#define REDUNDENT_SEMICOLON 49
+#define REDUNDENT 26
+#define REDUNDENT_WORD 0
 
 #define UNDECLARED_IDENT 11
-#define REDEFINED_IDENT 61
+#define REDEFINED_IDENT 60
 // 全局变量声明
 extern wchar_t w_ch; // 最近一次从文件中读出的字符
 extern unsigned long sym; // 最近一次识别出来的 token 的类型
@@ -163,4 +151,5 @@ void block();
 void body();
 void PL0Test();
 void error(size_t n);
+void error(size_t n, const wchar_t* extra);
 #endif

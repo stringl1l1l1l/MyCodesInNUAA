@@ -19,7 +19,7 @@ int SymTable::enter(wstring name, size_t offset, Category cat)
     // 如果在相同作用域有重复符号，且不为形参、过程名，则说明出现重定义
     if (pos != -1 && table[pos].info.level == level
         && table[pos].info.cat != Category::FORM) {
-        error(REDEFINED_IDENT);
+        error(REDEFINED_IDENT, name.c_str());
         return -1;
     }
     size_t top = table.size();
@@ -51,7 +51,7 @@ int SymTable::enterProc(wstring name)
         }
     }
     if (pos != -1) {
-        error(REDEFINED_IDENT);
+        error(REDEFINED_IDENT, name.c_str());
         return -1;
     }
     size_t top = table.size();
@@ -100,6 +100,6 @@ void symTableTest()
         if (mem != -1)
             wcout << setw(10) << mem << setw(10) << SymTable::table[mem].name << endl;
     }
-    int pos = SymTable::position(L"a");
-    wcout << pos << endl;
+    // int pos = SymTable::position(L"a");
+    // wcout << pos << endl;
 }
