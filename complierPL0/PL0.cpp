@@ -19,6 +19,8 @@ size_t strToken_len = 0; // 当前token长度
 size_t num; // 词法分析器输出结果之用，存放最近一次识别出来的数字的值
 size_t col_pos = 0; // 列指针
 size_t row_pos = 1; // 行指针
+size_t pre_word_col = 0; // 上一个非空白合法词尾列指针
+size_t pre_word_row = 1; // 上一个非空白合法词行指针
 size_t line_lenth; // 行缓冲区长度
 size_t err = 0; /* 出错总次数 */
 size_t offset = 0;
@@ -153,6 +155,7 @@ void readFile2USC2(string filename)
         wcout << L"cannot open file!" << endl;
         exit(0);
     }
+    wcout << L"\e[33mCompiling file '" << filename.c_str() << L"'!\e[0m" << endl;
     // 跳过 UTF8 BOM（0xEFBBBF）
     if (file.get() != 0xEF || file.get() != 0xBB || file.get() != 0xBF) {
         file.seekg(0, ios::beg);
@@ -237,7 +240,7 @@ void error(size_t n, const wchar_t* extra)
     wchar_t msg[200];
     wsprintf(msg, err_msg[n].c_str(), extra);
     err++;
-    wcout << L"\e[31m(" << row_pos << "," << col_pos - strToken_len + 1 << L")"
+    wcout << L"\e[31m(" << pre_word_row << "," << pre_word_col << L")"
           << L" Error: "
           << msg
           << L"\e[0m " << endl;
@@ -245,9 +248,8 @@ void error(size_t n, const wchar_t* extra)
 
 void error(size_t n)
 {
-
     err++;
-    wcout << L"\e[31m(" << row_pos << "," << col_pos - strToken_len + 1 << L")"
+    wcout << L"\e[31m(" << pre_word_row << "," << pre_word_col << L")"
           << L" Error: "
           << err_msg[n]
           << L"\e[0m " << endl;
@@ -256,11 +258,14 @@ void error(size_t n)
 // 格式化输出分析结果
 void over()
 {
+
     if (err == 0) {
         wcout << L"\e[32mNo error. Congratulations!\e[0m" << endl;
     } else {
         wcout << L"\e[31mTotol: " << err << L" errors\e[0m" << endl;
     }
+    wcout << L"\e[33m**************************Compile compelete!**************************\e[0m\n"
+          << endl;
 }
 
 // 判断是否为数字
@@ -344,6 +349,10 @@ int reserve(wstring str)
 // 词法分析器
 void getWord()
 {
+    if (w_ch != L'\n') {
+        pre_word_col = col_pos;
+        pre_word_row = row_pos;
+    }
     strToken.clear();
     strToken_len = 0;
     skipBlank();
@@ -421,7 +430,6 @@ void getWord()
             sym = NUL;
             break;
         }
-
         retract();
     }
     // 开头为数字，判断是否为数值类型
@@ -451,6 +459,7 @@ void getWord()
         getCh();
         if (w_ch == L'=') {
             contract();
+            pre_word_col++;
             sym = BECOMES;
         } else {
             error(MISSING, L"'='");
@@ -462,9 +471,11 @@ void getWord()
         getCh();
         if (w_ch == L'=') {
             contract();
+            pre_word_col++;
             sym = LEQ;
         } else if (w_ch == L'>') {
             contract();
+            pre_word_col++;
             sym = NEQ;
         } else {
             sym = LSS;
@@ -475,6 +486,7 @@ void getWord()
         getCh();
         if (w_ch == L'=') {
             contract();
+            pre_word_col++;
             sym = GEQ;
         } else {
             sym = GTR;
@@ -529,8 +541,8 @@ void getWord()
             sym = NUL;
         }
     }
-    wcout << L"(" << row_pos << L"," << col_pos << L")\t" << setw(15)
-          << strToken << setw(20) << sym_map[sym] << endl;
+    // wcout << L"(" << row_pos << L"," << col_pos << L")\t" << setw(15)
+    //       << strToken << setw(20) << sym_map[sym] << endl;
     err_str.clear();
 }
 
@@ -1065,6 +1077,12 @@ void analyze()
 void PL0Test()
 {
     init();
+    // string filename;
+    // wcout << L"请输入待编译的文件名称：" << endl;
+    // while (cin >> filename) {
+    //     readFile2USC2("E:\\Programming\\GitHub\\repository\\DataStruct\\complierPL0\\"
+    //     + filename); analyze(); wcout << L"请输入待编译的文件名称：" << endl;
+    // }
     readFile2USC2(PROGM_PATH);
     analyze();
 }

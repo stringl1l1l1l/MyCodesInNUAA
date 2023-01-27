@@ -1,10 +1,12 @@
 #include "SymbolTable.h"
 #include <iomanip>
 #include <map>
+
 size_t SymTable::sp = 1;
 vector<SymTableItem> SymTable::table; // 一个程序唯一的符号表
 vector<size_t> SymTable::display(PROC_CNT, -1); // 过程的嵌套层次表
-vector<size_t> SymTable::proc_addrs; // 记录所有过程的地址
+vector<size_t> SymTable::proc_addrs;            // 记录所有过程的地址
+
 
 void SymTable::mkTable()
 {
@@ -96,7 +98,7 @@ void symTableTest()
     wcout << L"display_____________________" << endl;
     wcout << setw(10) << L"addr" << setw(10) << L"proc" << endl;
     for (int i = 0; i < PROC_CNT; i++) {
-        unsigned int mem = SymTable::display[i];
+        int mem = SymTable::display[i];
         if (mem != -1)
             wcout << setw(10) << mem << setw(10) << SymTable::table[mem].name << endl;
     }
