@@ -102,7 +102,6 @@ extern size_t col_pos; // 列指针
 extern size_t row_pos; // 行指针
 extern size_t line_lenth; // 行缓冲区长度
 extern size_t err; // 出错总次数
-extern size_t offset; // 变量地址偏移值
 extern size_t level; //  层差
 
 extern string progm_str; // 源程序代码的string字符串形式

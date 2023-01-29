@@ -3,6 +3,9 @@
 
 #include <vector>
 using namespace std;
+
+extern size_t nextquad;
+
 enum Operation {
     add, // 加
     subtract, // 减
@@ -44,6 +47,6 @@ public:
     static void emit(Operation op, int arg1, int arg2, long long result);
     static List* makelist(int);
     static List* merge(List*, List*);
-    static void backpatch(List*, int);
+    static void backpatch(size_t p, size_t i);
 };
 #endif

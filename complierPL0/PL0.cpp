@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string>
 #include <tchar.h>
 #include <windows.h>
@@ -23,7 +24,6 @@ size_t pre_word_col = 0; // 上一个非空白合法词尾列指针
 size_t pre_word_row = 1; // 上一个非空白合法词行指针
 size_t line_lenth; // 行缓冲区长度
 size_t err = 0; /* 出错总次数 */
-size_t offset = 0;
 size_t level = 0; //  层差
 size_t maxLevel = 0;
 
@@ -241,18 +241,14 @@ void error(size_t n, const wchar_t* extra)
     wsprintf(msg, err_msg[n].c_str(), extra);
     err++;
     wcout << L"\e[31m(" << pre_word_row << "," << pre_word_col << L")"
-          << L" Error: "
-          << msg
-          << L"\e[0m " << endl;
+          << L" Error: " << msg << L"\e[0m " << endl;
 }
 
 void error(size_t n)
 {
     err++;
     wcout << L"\e[31m(" << pre_word_row << "," << pre_word_col << L")"
-          << L" Error: "
-          << err_msg[n]
-          << L"\e[0m " << endl;
+          << L" Error: " << err_msg[n] << L"\e[0m " << endl;
 }
 
 // 格式化输出分析结果
@@ -261,11 +257,12 @@ void over()
 
     if (err == 0) {
         wcout << L"\e[32mNo error. Congratulations!\e[0m" << endl;
+        wcout << L"\e[33m**************************Compile compelete!**************************\e[0m\n"
+              << endl;
     } else {
         wcout << L"\e[31mTotol: " << err << L" errors\e[0m" << endl;
+        exit(-1);
     }
-    wcout << L"\e[33m**************************Compile compelete!**************************\e[0m\n"
-          << endl;
 }
 
 // 判断是否为数字
@@ -589,8 +586,8 @@ void constDef()
 {
     if (sym == IDENT) {
         // 将常量登入符号表
-        SymTable::enter(strToken, offset, Category::CST);
-        offset += CST_WIDTH;
+        SymTable::enter(strToken, SymTable::offset_stk[level], Category::CST);
+        SymTable::offset_stk[level] += CST_WIDTH;
         getWord();
         // const -> id:=
         if (sym & (ASSIGN | EQL)) {
@@ -651,8 +648,8 @@ void vardecl()
         // var <id>
         if (sym == IDENT) {
             // 将标识符登入到符号表
-            SymTable::enter(strToken, VAR_WIDTH, Category::VAR);
-            offset += VAR_WIDTH;
+            SymTable::enter(strToken, SymTable::offset_stk[level], Category::VAR);
+            SymTable::offset_stk[level] += VAR_WIDTH;
             getWord();
         } else {
             judge(0, COMMA, MISSING, L"identifier");
@@ -662,8 +659,8 @@ void vardecl()
             getWord();
             if (sym == IDENT) {
                 // 将标识符登入到符号表
-                SymTable::enter(strToken, VAR_WIDTH, Category::VAR);
-                offset += VAR_WIDTH;
+                SymTable::enter(strToken, SymTable::offset_stk[level], Category::VAR);
+                SymTable::offset_stk[level] += VAR_WIDTH;
                 getWord();
             } else {
                 error(REDUNDENT, L"','"); // todo expect 标识符
@@ -703,14 +700,14 @@ void proc()
         }
         // <proc> -> procedure id ([id {,id}]
         if (sym == IDENT) {
-            SymTable::enter(strToken, VAR_WIDTH, Category::FORM);
-            offset += VAR_WIDTH;
+            SymTable::enter(strToken, SymTable::offset_stk[level], Category::FORM);
+            SymTable::offset_stk[level] += VAR_WIDTH;
             getWord();
             while (sym == COMMA) {
                 getWord();
                 if (sym == IDENT) {
-                    SymTable::enter(strToken, VAR_WIDTH, Category::FORM);
-                    offset += VAR_WIDTH;
+                    SymTable::enter(strToken, SymTable::offset_stk[level], Category::FORM);
+                    SymTable::offset_stk[level] += VAR_WIDTH;
                     getWord();
                 } else {
                     error(REDUNDENT, L"','");
@@ -732,6 +729,9 @@ void proc()
         // <proc> -> procedure id ([id {,id}]);<block> {;<proc>}
         if (sym & first_block) {
             block();
+            SymTable::addWidth(
+                SymTable::display[level],
+                SymTable::offset_stk[level]);
             level--;
             while (sym == SEMICOLON) {
                 getWord();
@@ -1057,6 +1057,9 @@ void prog()
     }
     //<prog> -> program id; <block>
     block();
+    SymTable::addWidth(
+        SymTable::display[level],
+        SymTable::offset_stk[level]);
     //<prog> -> program id; <block>#
     if (sym == NUL) {
         // 程序终止
