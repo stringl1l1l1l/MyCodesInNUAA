@@ -63,10 +63,8 @@ VarInfo::VarInfo()
 
 void VarInfo::setValue(wstring val_str) { this->value = w_str2int(val_str); }
 
-int VarInfo::getValue()
-{
-    return value;
-}
+int VarInfo::getValue() { return this->value; }
+
 void VarInfo::show()
 {
     wcout << setw(10) << L"cat:" << setw(15) << cat_map[cat]
@@ -74,11 +72,23 @@ void VarInfo::show()
           << setw(10) << L"level:" << setw(5) << level
           << setw(10) << L"value:" << setw(5) << value;
 }
+
+ProcInfo::ProcInfo()
+    : Information()
+{
+    this->entry = 0;
+}
+
+void ProcInfo::setEntry(size_t entry) { this->entry = entry; }
+
+size_t ProcInfo::getEntry() { return this->entry; }
+
 void ProcInfo::show()
 {
     wcout << setw(10) << L"cat:" << setw(15) << cat_map[cat]
           << setw(10) << L"size:" << setw(5) << offset
-          << setw(10) << L"level:" << setw(5) << level;
+          << setw(10) << L"level:" << setw(5) << level
+          << setw(10) << L"entry:" << setw(5) << entry;
 }
 
 void SymTableItem::show()
@@ -121,7 +131,8 @@ int SymTable::enter(wstring name, size_t offset, Category cat)
 int SymTable::enterProc(wstring name)
 {
     // 若在相同作用域内有重复过程名
-    if (lookUpProc(name) != -1) {
+    int pos = lookUpProc(name);
+    if (pos != -1 && SymTable::table[pos].info->level == level) {
         error(REDEFINED_IDENT, name.c_str());
         return -1;
     }
@@ -160,7 +171,7 @@ int SymTable::lookUpVar(wstring name)
 int SymTable::lookUpProc(wstring name)
 {
     for (auto addr : proc_addrs) {
-        if (table[addr].info->level == level && table[addr].name == name)
+        if (table[addr].name == name)
             return addr;
     }
     return -1;

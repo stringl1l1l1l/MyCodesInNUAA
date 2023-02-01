@@ -15,6 +15,8 @@ public:
     Information();
     virtual void setValue(wstring val_str) { }
     virtual int getValue() { return 0; }
+    virtual void setEntry(size_t entry) { }
+    virtual size_t getEntry() { return -1; }
     virtual void show();
 };
 
@@ -22,8 +24,7 @@ class VarInfo : public Information {
 public:
     enum Type type; // 类型
     int value; // is
-    bool isFormVar; // 是否为形参的标记
-    bool hasAssigned; // 是否进行过赋值的标记
+
     VarInfo();
     void setValue(wstring val_str) override;
     int getValue() override;
@@ -32,8 +33,13 @@ public:
 
 class ProcInfo : public Information {
 public:
-    vector<VarInfo> formVarList;
+    size_t entry; // 过程的中间代码入口地址
+    size_t form_var_cnt; // 过程的形参个数
+
+    ProcInfo();
     void show() override;
+    void setEntry(size_t entry) override;
+    size_t getEntry() override;
 };
 
 // 符号表项

@@ -30,19 +30,19 @@ using namespace std;
 #define ERR_CNT 70 // 报错种数
 
 #define NUL 0x0 /* 空 */
-#define IDENT 0x1 /* 标识符 */
-#define NUMBER 0x2 /* 数值 */
-#define PLUS 0x4 /* + */
-#define MINUS 0x8 /* - */
-#define MULTI 0x10 /* * */
-#define DIVIS 0x20 /* / */
-#define ODD_SYM 0x40 /* 奇数判断 */
-#define EQL 0x80 /* = */
-#define NEQ 0x100 /* <> */
-#define LSS 0x200 /* < */
-#define LEQ 0x400 /* <= */
-#define GTR 0x800 /* > */
-#define GEQ 0x1000 /* >= */
+#define EQL 0x1 /* =  1*/
+#define NEQ 0x2 /* <> 2*/
+#define LSS 0x4 /* < 4*/
+#define LEQ 0x8 /* <= 8*/
+#define GRT 0x10 /* > 16*/
+#define GEQ 0x20 /* >= 32*/
+#define ODD_SYM 0x40 /* 奇数判断 64*/
+#define IDENT 0x80 /* 标识符 */
+#define NUMBER 0x100 /* 数值 */
+#define PLUS 0x200 /* + */
+#define MINUS 0x400 /* - */
+#define MULTI 0x800 /* * */
+#define DIVIS 0x1000 /* / */
 #define LPAREN 0x2000 /* ( */
 #define RPAREN 0x4000 /* ) */
 #define COMMA 0x8000 /* , */
@@ -66,32 +66,34 @@ using namespace std;
 
 #define EXPECT_BECOMES_NOT_EQL 1
 #define EXPECT_NUMEBR_AFTER_BECOMES 2
-#define EXPECT_STATEMENT 7
-#define EXPECT_EXPRESSION 27
-#define EXPECT_CONST 50
-#define EXPECT_IDENT_FIND_NUM 29
-#define EXPECT_SEMICOLON_FIND_COMMA 38
+#define EXPECT_STATEMENT 3
+#define EXPECT_EXPRESSION 4
+#define EXPECT_CONST 5
+#define EXPECT_IDENT_FIND_NUM 6
+#define EXPECT_SEMICOLON_FIND_COMMA 7
 
-#define ILLEGAL_WORD 40
-#define ILLEGAL_EXP 46
-#define ILLEGAL_FACTOR 47
-#define ILLEGAL_BLOCK 48
-#define ILLEGAL_CONSTDEF 50
-#define ILLEGAL_VARDECL 51
-#define ILLEGAL_CONDECL 55
-#define ILLEGAL_PROC 56
-#define ILLEGAL_TERM 57
-#define ILLEGAL_LEXP 58
-#define ILLEGAL_STMT 59
-#define ILLEGAL_RVALUE_ASSIGN 60
+#define ILLEGAL_WORD 8
+#define ILLEGAL_EXP 9
+#define ILLEGAL_FACTOR 10
+#define ILLEGAL_BLOCK 11
+#define ILLEGAL_CONSTDEF 12
+#define ILLEGAL_VARDECL 13
+#define ILLEGAL_CONDECL 14
+#define ILLEGAL_PROC 15
+#define ILLEGAL_TERM 16
+#define ILLEGAL_LEXP 17
+#define ILLEGAL_STMT 18
+#define ILLEGAL_RVALUE_ASSIGN 19
 
-#define MISSING 25
+#define MISSING 20
 
-#define REDUNDENT 26
-#define REDUNDENT_WORD 0
+#define REDUNDENT 21
+#define REDUNDENT_WORD 22
 
-#define UNDECLARED_IDENT 11
-#define REDEFINED_IDENT 60
+#define UNDECLARED_IDENT 23
+#define UNDECLARED_PROC 24
+
+#define REDEFINED_IDENT 25
 // 全局变量声明
 extern wchar_t w_ch; // 最近一次从文件中读出的字符
 extern unsigned long sym; // 最近一次识别出来的 token 的类型
@@ -135,12 +137,12 @@ extern unsigned long follow_block;
 extern unsigned long follow_constdef;
 extern unsigned long follow_proc;
 enum Category {
-  NIL,   // 空
-  ARR,   // 数组
-  VAR,   // 变量
-  PROCE, // 过程
-  CST,   // 常量
-  FORM,  // 形参
+    NIL, // 空
+    ARR, // 数组
+    VAR, // 变量
+    PROCE, // 过程
+    CST, // 常量
+    FORM, // 形参
 };
 
 enum Type { INTERGER };

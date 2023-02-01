@@ -7,6 +7,7 @@ using namespace std;
 #define P_CODE_CNT 10
 #define UNIT_SIZE 4
 #define ACT_REC_SIZE 3
+
 #define OPR_NEGTIVE 1
 #define OPR_ADD 2
 #define OPR_SUB 3
@@ -14,7 +15,7 @@ using namespace std;
 #define OPR_DIVIS 5
 #define OPR_ODD 6
 #define OPR_EQL 7
-#define OPR_NEQL 8
+#define OPR_NEQ 8
 #define OPR_LSS 9
 #define OPR_GEQ 10
 #define OPR_GRT 11
@@ -58,10 +59,8 @@ public:
 
     PCodeList();
     ~PCodeList();
-    static void emit(Operation op, int L, int a);
-    static PCodeList* makelist(int);
-    static PCodeList* merge(PCodeList*, PCodeList*);
-    static void backpatch(size_t p, size_t i);
+    static size_t emit(Operation op, int L, int a);
+    static void backpatch(size_t target, size_t addr);
     static void printCode();
 };
 
