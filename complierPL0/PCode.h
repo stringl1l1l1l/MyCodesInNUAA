@@ -1,28 +1,68 @@
 #ifndef _P_CODE_H
 #define _P_CODE_H
+#include <stack>
 #include <string>
+#include <vector>
 using namespace std;
 #define P_CODE_CNT 10
+#define UNIT_SIZE 4
+#define ACT_REC_SIZE 3
+#define OPR_NEGTIVE 1
+#define OPR_ADD 2
+#define OPR_SUB 3
+#define OPR_MULTI 4
+#define OPR_DIVIS 5
+#define OPR_ODD 6
+#define OPR_EQL 7
+#define OPR_NEQL 8
+#define OPR_LSS 9
+#define OPR_GEQ 10
+#define OPR_GRT 11
+#define OPR_LEQ 12
+#define OPR_PRINT 13
+#define OPR_PRINTLN 14
+
 // 中间代码指令集
-enum Function {
-    LIT,
-    OPR,
-    LOD,
-    STO,
-    CAL,
-    INT,
-    JMP,
-    JPC,
-    RED,
-    WRT
+enum Operation {
+    lit, // 取常量a放入数据栈栈顶
+    opr, // 执行运算，a表示执行某种运算
+    load, // 取变量（相对地址为a，层差为L）放到数据栈的栈顶
+    store, // 将数据栈栈顶的内容存入变量（相对地址为a，层次差为L）
+    call, // 调用过程（转子指令）（入口地址为a，层次差为L）
+    alloc, // 数据栈栈顶指针增加a
+    jmp, // 条件转移到地址为a的指令
+    jpc, // 条件转移指令，转移到地址为a的指令
+    red, // 读数据并存入变量（相对地址为a，层次差为L）
+    wrt, // 将栈顶内容输出
 };
 
-struct PCode {
-    Function function; // 伪操作码
-    unsigned int L; // 层差
-    unsigned int addr; // 相对地址
+class PCode {
+public:
+    Operation op; // 伪操作码
+    int L; // 层差：引用层 - 声明层
+    int a; // 相对地址
+    PCode(Operation op, int L, int a)
+    {
+        this->op = op;
+        this->L = L;
+        this->a = a;
+    };
 };
 
-void gen(Function f, unsigned int level, unsigned int addr);
+class PCodeList {
+public:
+    static size_t pc;
+    static size_t base;
+    static vector<PCode> code_list;
+    static vector<unsigned int> running_stack;
+
+    PCodeList();
+    ~PCodeList();
+    static void emit(Operation op, int L, int a);
+    static PCodeList* makelist(int);
+    static PCodeList* merge(PCodeList*, PCodeList*);
+    static void backpatch(size_t p, size_t i);
+    static void printCode();
+};
 
 #endif

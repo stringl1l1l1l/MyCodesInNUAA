@@ -1,5 +1,6 @@
 #include "PL0.h"
-#include "SymbolTable.h"
+#include "PCode.h"
+#include "SymTable.h"
 #include <fcntl.h>
 #include <io.h>
 #include <iomanip>
@@ -108,6 +109,8 @@ void init()
     // 报错信息初始化
     // missing错误
     err_msg[MISSING] = L"Missing %s";
+    // undeclare错误
+    err_msg[UNDECLARED_IDENT] = L"Undecleared identifier %s";
     // redefined错误
     err_msg[REDEFINED_IDENT] = L"Redefined identifier %s";
     // illegal错误
@@ -122,6 +125,7 @@ void init()
     err_msg[ILLEGAL_TERM] = L"Illegal term definition";
     err_msg[ILLEGAL_LEXP] = L"Illegal lexp definition";
     err_msg[ILLEGAL_STMT] = L"Illegal statment definition";
+    err_msg[ILLEGAL_RVALUE_ASSIGN] = L"Cannot assign a rvalue";
     // expect错误
     err_msg[EXPECT_BECOMES_NOT_EQL] = L"Found '=' when expecting ':='";
     err_msg[EXPECT_NUMEBR_AFTER_BECOMES] = L"There must be a number to follow '='";
@@ -261,7 +265,7 @@ void over()
               << endl;
     } else {
         wcout << L"\e[31mTotol: " << err << L" errors\e[0m" << endl;
-        exit(-1);
+        // exit(-1);
     }
 }
 
@@ -562,6 +566,7 @@ void judge(unsigned long s1, unsigned long s2, size_t n)
     } else
         getWord();
 }
+
 void judge(unsigned long s1, unsigned long s2, size_t n, const wchar_t* extra)
 {
     if (!(sym & s1)) // 当前符号不在s1中
@@ -585,9 +590,9 @@ void judge(unsigned long s1, unsigned long s2, size_t n, const wchar_t* extra)
 void constDef()
 {
     if (sym == IDENT) {
-        // 将常量登入符号表
-        SymTable::enter(strToken, SymTable::offset_stk[level], Category::CST);
-        SymTable::offset_stk[level] += CST_WIDTH;
+        // 将常量登入符号表，常量属于右值，不需要记录offset
+        wstring name = strToken;
+        SymTable::enter(name, 0, Category::CST);
         getWord();
         // const -> id:=
         if (sym & (ASSIGN | EQL)) {
@@ -597,6 +602,7 @@ void constDef()
             getWord();
             // const -> id:=number
             if (sym == NUMBER) {
+                SymTable::table[SymTable::table.size() - 1].info->setValue(strToken);
                 getWord();
             } else {
                 error(EXPECT_NUMEBR_AFTER_BECOMES);
@@ -750,22 +756,34 @@ void proc()
     }
 }
 
-// <exp> -> [+|-] <term>{<aop><term>}
+// <exp> -> [+|-] <term>{[+|-] <term>}
 void exp()
 {
     // <exp> -> [+|-]
+    unsigned long aop = NUL;
     if (sym == PLUS || sym == MINUS) {
+        aop = sym;
         getWord();
     }
-    // <exp> -> <term>{<aop><term>}
+    // <exp> -> <term>{[+|-] <term>}
     if (sym & first_term) // FIRST(term) 、 FIRST(factor)
     {
         term();
+        // 若有负号，栈顶取反
+        if (aop == MINUS)
+            PCodeList::emit(opr, 0, OPR_NEGTIVE);
         while (sym == PLUS || sym == MINUS) {
+            aop = sym;
             getWord();
             // FIRST(term)
             if (sym & first_term) {
                 term();
+                // 减
+                if (aop == MINUS)
+                    PCodeList::emit(opr, 0, OPR_SUB);
+                // 加
+                else
+                    PCodeList::emit(opr, 0, OPR_ADD);
             } else {
                 error(REDUNDENT_WORD);
             }
@@ -779,11 +797,28 @@ void exp()
 void factor()
 {
     if (sym == IDENT) {
+        // 查找变量符号
+        int pos = SymTable::lookUpVar(strToken);
+        if (pos == -1)
+            error(UNDECLARED_IDENT, strToken.c_str());
+        // 若为常量，直接获取其符号表中的右值
+        else {
+            SymTableItem cur_item = SymTable::table[pos];
+            int L = level - cur_item.info->level;
+            if (cur_item.info->cat == Category::CST) {
+                int val = cur_item.info->getValue();
+                PCodeList::emit(lit, L, val);
+            }
+            // 若为变量，取左值
+            else {
+                PCodeList::emit(load, L, cur_item.info->offset / UNIT_SIZE + ACT_REC_SIZE);
+            }
+        }
         getWord();
-        return;
     } else if (sym == NUMBER) {
+        // 数值，直接入栈
+        PCodeList::emit(lit, 0, w_str2int(strToken));
         getWord();
-        return;
     } else if (sym == LPAREN) {
         getWord();
         exp();
@@ -797,15 +832,23 @@ void factor()
     }
 }
 
-// <term> -> <factor>{<mop><factor>}
+// <term> -> <factor>{[*|/] <factor>}
 void term()
 {
     if (sym & first_term) {
         factor();
+        // factor()执行完毕后，当前栈顶即为factor的值
         while (sym == MULTI || sym == DIVIS) {
+            unsigned long nop = sym;
             getWord();
             if (sym & first_term) {
                 factor();
+                // 乘
+                if (nop == MULTI)
+                    PCodeList::emit(opr, 0, OPR_MULTI);
+                // 除
+                else
+                    PCodeList::emit(opr, 0, OPR_DIVIS);
             } else {
                 error(REDUNDENT_WORD);
             }
@@ -844,11 +887,16 @@ void lexp()
 
 void statement()
 {
-    switch (sym) {
     // <statement> -> id := <exp>
-    case IDENT:
+    if (sym == IDENT) {
+        // 查找左值，右值不可被赋值
+        int pos = SymTable::lookUpVar(strToken);
+        if (pos == -1)
+            error(UNDECLARED_IDENT, strToken.c_str());
         getWord();
         if (sym == ASSIGN) {
+            if (pos != -1 && SymTable::table[pos].info->cat == Category::CST)
+                error(ILLEGAL_RVALUE_ASSIGN);
             getWord();
         } else if (sym == EQL) {
             error(EXPECT_BECOMES_NOT_EQL);
@@ -857,9 +905,9 @@ void statement()
             judge(0, follow_exp, MISSING, L"':='");
         }
         exp();
-        break;
+    }
     // <statement> -> if <lexp> then <statement> [else <statement>]
-    case IF_SYM:
+    else if (sym == IF_SYM) {
         getWord();
         lexp();
         if (sym == THEN_SYM) {
@@ -873,9 +921,9 @@ void statement()
             getWord();
             statement();
         }
-        break;
+    }
     // <statement> -> while <lexp> do <statement>
-    case WHILE_SYM:
+    else if (sym == WHILE_SYM) {
         getWord();
         // FIRST(lexp)
         lexp();
@@ -885,9 +933,9 @@ void statement()
         } else {
             judge(0, first_stmt, MISSING, L"do");
         }
-        break;
+    }
     // <statement> -> call id ([{<exp>{,<exp>}])
-    case CALL_SYM:
+    else if (sym == CALL_SYM) {
         getWord();
         if (sym == IDENT) {
             getWord();
@@ -914,14 +962,13 @@ void statement()
         if (sym == RPAREN) {
             getWord();
         }
-
-        break;
+    }
     // <statement> -> <body>
-    case BEGIN_SYM:
+    else if (sym == BEGIN_SYM) {
         body();
-        break;
+    }
     // <statement> -> read (id{,id})
-    case READ_SYM:
+    else if (sym == READ_SYM) {
         getWord();
         if (sym == LPAREN) {
             getWord();
@@ -946,9 +993,9 @@ void statement()
         } else {
             judge(0, follow_stmt, MISSING, L"')'");
         }
-        break;
+    }
     // <statement> -> write(<exp> {,<exp>})
-    case WRITE_SYM:
+    else if (WRITE_SYM) {
         getWord();
         if (sym == LPAREN) {
             getWord();
@@ -968,12 +1015,8 @@ void statement()
         } else {
             judge(0, follow_stmt, MISSING, L"')'");
         }
-
-        break;
-    default:
+    } else
         judge(0, follow_stmt, ILLEGAL_STMT);
-        break;
-    }
 }
 
 // <body> -> begin <statement> {;<statement>} end

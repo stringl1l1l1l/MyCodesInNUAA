@@ -17,7 +17,7 @@
 using namespace std;
 
 #define PROGM_PATH \
-    "E:\\Programming\\GitHub\\repository\\DataStruct\\complierPL0\\test.txt"
+    "E:\\Programming\\GitHub\\repository\\DataStruct\\complierPL0\\test4.txt"
 #define RSV_WORD_MAX 15 /* 保留字的数量 */
 #define N_MAX 14 /* 数字允许的最长位数 */
 #define PROGM_CH_MAX 5000 /*源程序的最大字符数*/
@@ -83,6 +83,7 @@ using namespace std;
 #define ILLEGAL_TERM 57
 #define ILLEGAL_LEXP 58
 #define ILLEGAL_STMT 59
+#define ILLEGAL_RVALUE_ASSIGN 60
 
 #define MISSING 25
 
@@ -134,13 +135,14 @@ extern unsigned long follow_block;
 extern unsigned long follow_constdef;
 extern unsigned long follow_proc;
 enum Category {
-    NIL, // 空
-    ARR, // 数组
-    VAR, // 变量
-    PROCE, // 过程
-    CST, // 常量
-    FORM, // 形参
+  NIL,   // 空
+  ARR,   // 数组
+  VAR,   // 变量
+  PROCE, // 过程
+  CST,   // 常量
+  FORM,  // 形参
 };
+
 enum Type { INTERGER };
 // 函数声明
 void exp();

@@ -2,7 +2,7 @@
 #define _SYMBOL_TABLE_H
 
 #include "PL0.h"
-#include <map>
+#include <iomanip>
 #include <string>
 #include <vector>
 
@@ -12,38 +12,47 @@ public:
     enum Category cat; // 种属
     size_t offset;
     size_t level;
+    Information();
+    virtual void setValue(wstring val_str) { }
+    virtual int getValue() { return 0; }
+    virtual void show();
 };
+
 class VarInfo : public Information {
 public:
     enum Type type; // 类型
-    unsigned int size; // 占用存储单元数
+    int value; // is
     bool isFormVar; // 是否为形参的标记
     bool hasAssigned; // 是否进行过赋值的标记
-    void* extraInfo;
+    VarInfo();
+    void setValue(wstring val_str) override;
+    int getValue() override;
+    void show() override;
 };
 
 class ProcInfo : public Information {
 public:
     vector<VarInfo> formVarList;
+    void show() override;
 };
 
 // 符号表项
-typedef struct SymTableItem {
+class SymTableItem {
+public:
     unsigned int next_item;
-    Information info;
+    Information* info;
     wstring name; // 符号名
-} SymTableItem;
-struct Couple {
-    size_t tablePtr;
-    size_t offset;
+    void show();
 };
+
+// 符号表
 class SymTable {
 public:
     static size_t sp; // 指向当前子过程符号表的首地址
     static vector<SymTableItem> table; // 一个程序唯一的符号表
     static vector<size_t> display; // 过程的嵌套层次表
-    static vector<size_t> proc_addrs;
-    static vector<size_t> offset_stk;
+    static vector<size_t> offset_stk; // 过程的内存大小记录
+    static vector<size_t> proc_addrs; // 所有过程的入口地址
 
 public:
     SymTable();
@@ -56,8 +65,10 @@ public:
     // 将过程名登入符号表
     static int enterProc(wstring name);
     // 查找符号在符号表中位置
-    static int position(wstring name);
+    static int lookUpVar(wstring name);
+    static int lookUpProc(wstring name);
 };
 
 void symTableTest();
+int w_str2int(wstring);
 #endif

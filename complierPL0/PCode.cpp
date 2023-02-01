@@ -1,19 +1,33 @@
 #include "PCode.h"
 #include <iostream>
 using namespace std;
-string func2str[P_CODE_CNT] = {
-    "LIT",
-    "OPR",
-    "LOD",
-    "STO",
-    "CAL",
-    "INT",
-    "JMP",
-    "JPC",
-    "RED",
-    "WRT"
+
+size_t PCodeList::pc;
+size_t PCodeList::base;
+vector<PCode> PCodeList::code_list;
+vector<unsigned int> PCodeList::running_stack;
+
+wstring op_map[P_CODE_CNT] = {
+    L"LIT",
+    L"OPR",
+    L"LOD",
+    L"STO",
+    L"CAL",
+    L"INT",
+    L"JMP",
+    L"JPC",
+    L"RED",
+    L"WRT"
 };
 
-void gen(Function f, unsigned int level, unsigned int addr)
+void PCodeList::emit(Operation op, int L, int a)
 {
+    code_list.push_back(PCode(op, L, a));
+}
+
+void PCodeList::printCode()
+{
+    for (PCode mem : code_list) {
+        wcout << op_map[mem.op] << L", " << mem.L << L", " << mem.a << endl;
+    }
 }
