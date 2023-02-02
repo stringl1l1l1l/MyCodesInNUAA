@@ -52,13 +52,8 @@ public:
 
 class PCodeList {
 public:
-    static size_t pc;
-    static size_t base;
     static vector<PCode> code_list;
-    static vector<unsigned int> running_stack;
 
-    PCodeList();
-    ~PCodeList();
     static int emit(Operation op, int L, int a);
     static void backpatch(size_t target, size_t addr);
     static void printCode();

@@ -1,12 +1,10 @@
 #include "PCode.h"
+#include "PL0.h"
 #include <iomanip>
 #include <iostream>
 using namespace std;
 
-size_t PCodeList::pc;
-size_t PCodeList::base;
 vector<PCode> PCodeList::code_list;
-vector<unsigned int> PCodeList::running_stack;
 
 wstring op_map[P_CODE_CNT] = {
     L"LIT",
