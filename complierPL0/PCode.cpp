@@ -21,7 +21,7 @@ wstring op_map[P_CODE_CNT] = {
     L"WRT"
 };
 
-size_t PCodeList::emit(Operation op, int L, int a)
+int PCodeList::emit(Operation op, int L, int a)
 {
     code_list.push_back(PCode(op, L, a));
     return code_list.size() - 1;

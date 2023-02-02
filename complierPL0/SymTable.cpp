@@ -1,6 +1,7 @@
 #include "SymTable.h"
 #include <iomanip>
 #include <iostream>
+#include <ostream>
 #include <stdlib.h>
 #include <string>
 #include <vector>
@@ -28,7 +29,7 @@ int w_str2int(wstring num_str)
     int num = 0;
     // 先遍历一遍字符串，判断合法性
     size_t size = num_str.size();
-    for (auto w_ch : num_str) {
+    for (wchar_t w_ch : num_str) {
         if (!(w_ch <= L'9' && w_ch >= L'0')) {
             wcout << L"Illegal string to transfer!" << endl;
             return 0;
@@ -88,7 +89,13 @@ void ProcInfo::show()
     wcout << setw(10) << L"cat:" << setw(15) << cat_map[cat]
           << setw(10) << L"size:" << setw(5) << offset
           << setw(10) << L"level:" << setw(5) << level
-          << setw(10) << L"entry:" << setw(5) << entry;
+          << setw(10) << L"entry:" << setw(5) << entry
+          << setw(17) << L"form var list:";
+    if (form_var_list.empty())
+        wcout << setw(5) << L"null";
+    for (size_t mem : form_var_list) {
+        wcout << setw(5) << SymTable::table[mem].name;
+    }
 }
 
 void SymTableItem::show()
@@ -170,7 +177,7 @@ int SymTable::lookUpVar(wstring name)
 
 int SymTable::lookUpProc(wstring name)
 {
-    for (auto addr : proc_addrs) {
+    for (size_t addr : proc_addrs) {
         if (table[addr].name == name)
             return addr;
     }
@@ -186,7 +193,7 @@ void symTableTest()
 {
     // wcout << L"SymTable____________________" << endl;
     // wcout << setw(10) << L"name" << setw(10) << L"next" << endl;
-    // for (auto mem : SymTable::table) {
+    // for (SymTableItem mem : SymTable::table) {
     //     wcout << setw(10) << mem.name << setw(10) << mem.next_item << endl;
     // }
 
@@ -205,19 +212,20 @@ void symTableTest()
     //           << setw(10)
     //           << SymTable::table[SymTable::proc_addrs[i]].info.offset << endl;
     // }
-    wcout << L"SymTable____________________" << endl;
-    for (auto mem : SymTable::table) {
+    wcout << L"____________________________________________________SymTable_______________________________________________" << endl;
+    for (SymTableItem mem : SymTable::table) {
         mem.show();
     }
-
-    wcout << L"display_____________________" << endl;
+    wcout << L"___________________________________________________________________________________________________________" << endl;
+    wcout << L"________________display________________" << endl;
     wcout << setw(10) << L"addr" << setw(10) << L"proc" << endl;
     for (int i = 0; i < PROC_CNT; i++) {
         int mem = SymTable::display[i];
         if (mem != -1)
             wcout << setw(10) << mem << setw(10) << SymTable::table[mem].name << endl;
     }
-    wcout << L"proc_size_____________________" << endl;
+    wcout << L"_______________________________________" << endl;
+    wcout << L"_______________proc_size_______________" << endl;
     wcout << setw(10) << L"proc" << setw(10) << L"size" << endl;
     for (int i = 0; i < SymTable::proc_addrs.size(); i++) {
         wcout << setw(10)
@@ -225,4 +233,5 @@ void symTableTest()
               << setw(10)
               << SymTable::table[SymTable::proc_addrs[i]].info->offset << endl;
     }
+    wcout << L"_______________________________________" << endl;
 }

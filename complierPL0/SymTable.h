@@ -7,6 +7,7 @@
 #include <vector>
 
 using namespace std;
+// 父类信息类型
 class Information {
 public:
     enum Category cat; // 种属
@@ -20,6 +21,7 @@ public:
     virtual void show();
 };
 
+// 变量信息，继承信息类型
 class VarInfo : public Information {
 public:
     enum Type type; // 类型
@@ -31,10 +33,11 @@ public:
     void show() override;
 };
 
+// 过程信息，继承信息类型
 class ProcInfo : public Information {
 public:
     size_t entry; // 过程的中间代码入口地址
-    size_t form_var_cnt; // 过程的形参个数
+    vector<size_t> form_var_list; // 过程的形参入口地址列表
 
     ProcInfo();
     void show() override;

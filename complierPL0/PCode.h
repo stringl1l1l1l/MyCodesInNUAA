@@ -59,7 +59,7 @@ public:
 
     PCodeList();
     ~PCodeList();
-    static size_t emit(Operation op, int L, int a);
+    static int emit(Operation op, int L, int a);
     static void backpatch(size_t target, size_t addr);
     static void printCode();
 };
