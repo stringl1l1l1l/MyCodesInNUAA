@@ -17,7 +17,7 @@
 using namespace std;
 
 #define PROGM_PATH \
-    "E:\\Programming\\GitHub\\repository\\DataStruct\\complierPL0\\test4.txt"
+    "E:\\Programming\\GitHub\\repository\\DataStruct\\complierPL0\\testfib.txt"
 #define RSV_WORD_MAX 15 /* 保留字的数量 */
 #define N_MAX 14 /* 数字允许的最长位数 */
 #define PROGM_CH_MAX 5000 /*源程序的最大字符数*/
@@ -149,6 +149,9 @@ enum Category {
 
 enum Type { INTERGER };
 // 函数声明
+void init();
+void readFile2USC2(string);
+void analyze();
 void exp();
 void factor();
 void term();

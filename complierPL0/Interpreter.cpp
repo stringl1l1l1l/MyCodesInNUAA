@@ -1,5 +1,6 @@
 #include "Interpreter.h"
 #include "PL0.h"
+#include <iostream>
 
 size_t Interpreter::pc = 0;
 size_t Interpreter::top = 0;
@@ -24,8 +25,8 @@ void Interpreter::opr(Operation op, int L, int a)
         // 将当前过程活动记录全部弹栈
         for (int i = 0; i <= top - sp; i++) {
             running_stack.pop_back();
-            top--;
         }
+        top -= top - sp;
     } else if (a == OPR_NEGTIVE) {
         // 栈顶取反(反码 + 1)
         running_stack[top - 1] = ~running_stack[top - 1] + 1;
@@ -132,27 +133,42 @@ void Interpreter::lod(Operation op, int L, int a)
     // 根据层级和偏移量，查找display表
     // running_stack[sp + DISPLAY + L]即指定层级L的活动记录基地址
     running_stack.push_back(running_stack[running_stack[sp + DISPLAY + L] + a]);
+    top++;
     pc++;
 }
 
 // 根据层级和偏移量，将栈顶数据存入指定单元，并弹栈
 void Interpreter::sto(Operation op, int L, int a)
 {
-    // 根据层级和偏移量，查找display表
-    // running_stack[sp + DISPLAY + L]即指定层级L的活动记录基地址
-    running_stack[running_stack[sp + DISPLAY + L] + a] = running_stack[top - 1];
-    // 读取数据后弹栈
-    running_stack.pop_back();
-    top--;
+    if (L >= 0) {
+        // 根据层级和偏移量，查找display表
+        // running_stack[sp + DISPLAY + L]即指定层级L的活动记录基地址
+        running_stack[running_stack[sp + DISPLAY + L] + a] = running_stack[top - 1];
+        // 读取数据后弹栈
+        running_stack.pop_back();
+        top--;
+    }
+    // L为-1，说明这是形参传递的代码，需要预先开辟空间
+    else {
+        size_t cur_size = running_stack.size();
+        // 取出栈顶值，并弹栈
+        int val = running_stack[cur_size - 1];
+        running_stack.pop_back();
+        cur_size--;
+        top--;
+        // 预先开辟空间，个数为a+1(a为变量下标，从0计数)
+        for (int i = cur_size - top; i <= a; i++)
+            running_stack.push_back(0);
+        // 将形参传递至指定位置
+        running_stack[top + a] = val;
+    }
     pc++;
 }
 
 // 调用过程，先保存断点，然后调整sp
 void Interpreter::cal(Operation op, int L, int a)
 {
-    // 预先开辟空间
-    for (int i = 0; i < ACT_PRE_REC_SIZE + L + 1; i++)
-        running_stack.push_back(0);
+
     // 保存断点
     running_stack[top + RA] = pc + 1;
     // 复制全局display的L+1个单元到即将开辟的活动记录
@@ -162,7 +178,7 @@ void Interpreter::cal(Operation op, int L, int a)
         running_stack[top + DISPLAY + i] = running_stack[running_stack[sp + GLO_DIS] + i];
     // 第L+1个单元是即将开辟的活动记录的基地址
     running_stack[top + DISPLAY + L] = top;
-    // 记录并调整sp到即将开辟的活动记录
+    // 记录老sp，并调整sp到即将开辟的活动记录
     running_stack[top + DL] = sp;
     sp = top;
     // 跳转
@@ -172,8 +188,9 @@ void Interpreter::cal(Operation op, int L, int a)
 // 在当前栈top处开辟a个内存单元，
 void Interpreter::alc(Operation op, int L, int a)
 {
+    size_t cur_size = running_stack.size();
     // 开辟空间时减去已经额外开辟的空间
-    for (int i = 0; i < a - (running_stack.size() - top); i++)
+    for (int i = 0; i < a - (cur_size - top); i++)
         running_stack.push_back(0);
     // 数据栈顶与内存栈顶对齐
     top = running_stack.size();
@@ -191,16 +208,22 @@ void Interpreter::jmp(Operation op, int L, int a)
 // 当前栈顶条件为假时跳转
 void Interpreter::jpc(Operation op, int L, int a)
 {
+    // 栈顶条件为假
     if (!running_stack[top - 1])
         pc = a;
+    // 栈顶条件为真
     else
         pc++;
+    // 弹栈
+    running_stack.pop_back();
+    top--;
 }
 
 // 从命令行读取一个数据到栈顶
 void Interpreter::red(Operation op, int L, int a)
 {
     int data;
+    wcout << "read: ";
     wcin >> data;
     // 数据入栈
     running_stack.push_back(data);
@@ -211,7 +234,7 @@ void Interpreter::red(Operation op, int L, int a)
 // 将当前栈顶输出
 void Interpreter::wrt(Operation op, int L, int a)
 {
-    wcout << running_stack[top - 1] << endl;
+    wcout << "write: " << running_stack[top - 1] << endl;
     // 弹栈
     running_stack.pop_back();
     top--;

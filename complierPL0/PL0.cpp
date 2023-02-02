@@ -316,7 +316,7 @@ int isOprator(wchar_t ch)
 // 跳过所有空白符，并将读指针置于空白符下一个位置，但并不装载下一个字符
 void skipBlank()
 {
-    while (progm_w_str[ch_ptr] && progm_w_str[ch_ptr] == L' ') {
+    while (progm_w_str[ch_ptr] && (progm_w_str[ch_ptr] == L' ' || progm_w_str[ch_ptr] == L'\t')) {
         col_pos++;
         ch_ptr++;
     }
@@ -448,7 +448,7 @@ void getWord()
         }
         // 遇到字母
         if (isLetter(w_ch)) {
-            error(ILLEGAL_WORD, strToken.c_str());
+            error(ILLEGAL_WORD, (L"'" + strToken + L"'").c_str());
             // 跳过错误至下一个终止符
             while (!isTerminate(w_ch))
                 getCh();
@@ -545,7 +545,7 @@ void getWord()
             }
         } else {
             contract();
-            error(ILLEGAL_WORD, strToken.c_str());
+            error(ILLEGAL_WORD, (L"'" + strToken + L"'").c_str());
             sym = NUL;
         }
     }
@@ -753,7 +753,7 @@ void proc()
         if (sym & first_block) {
             block();
             // 执行返回，并弹栈
-            PCodeList::emit(opr, 0, 0);
+            PCodeList::emit(opr, 0, OPR_RETURN);
             level--;
             // 当前过程结束，开始分析下面的过程
             while (sym == SEMICOLON) {
@@ -823,14 +823,13 @@ void factor()
         else
             // 用临时变量记录当前查到的信息
             cur_info = (VarInfo*)SymTable::table[pos].info;
-        int L = cur_info->level;
         if (cur_info->cat == Category::CST) {
             int val = cur_info->getValue();
-            PCodeList::emit(lit, L, val);
+            PCodeList::emit(lit, cur_info->level, val);
         }
         // 若为变量，取左值
         else {
-            PCodeList::emit(load, L, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + level + 1);
+            PCodeList::emit(load, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + cur_info->level + 1);
         }
         getWord();
     } else if (sym == NUMBER) {
@@ -962,17 +961,20 @@ void statement()
         }
         exp();
         // 赋值的P代码，当前栈顶为计算出的表达式
-        PCodeList::emit(store, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + level + 1);
+        PCodeList::emit(store, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + cur_info->level + 1);
     }
     // <statement> -> if <lexp> then <statement> [else <statement>]
     else if (sym == IF_SYM) {
         getWord();
         lexp();
-        int entry = -1;
+        int entry_jpc = -1, entry_jmp = -1;
+
         // 当前栈顶为条件表达式的布尔值
         if (sym == THEN_SYM) {
-            // 条件为假跳转，待回填else或出口地址
-            entry = PCodeList::emit(jpc, 0, 0);
+            // 条件为假跳转，待回填else入口地址
+            entry_jpc = PCodeList::emit(jpc, 0, 0);
+            // 待回填if外的入口地址
+            entry_jmp = PCodeList::emit(jmp, 0, 0);
             getWord();
         } else {
             judge(0, first_stmt, MISSING, L"then");
@@ -980,12 +982,12 @@ void statement()
         statement();
         if (sym == ELSE_SYM) {
             getWord();
-            // 将即将写的语句地址回填
-            PCodeList::backpatch(entry, PCodeList::code_list.size());
+            // 将else入口地址回填至jpc
+            PCodeList::backpatch(entry_jpc, PCodeList::code_list.size());
             statement();
         }
-        // 将即将写的语句地址回填
-        PCodeList::backpatch(entry, PCodeList::code_list.size());
+        // 将if外入口地址回填至jmp
+        PCodeList::backpatch(entry_jmp, PCodeList::code_list.size());
     }
     // <statement> -> while <lexp> do <statement>
     else if (sym == WHILE_SYM) {
@@ -1032,14 +1034,14 @@ void statement()
         if (sym & first_exp) {
             exp();
             // 将实参传入即将调用的子过程
-            PCodeList::emit(store, cur_info->level, ACT_PRE_REC_SIZE + level + 1);
+            PCodeList::emit(store, -1, ACT_PRE_REC_SIZE + cur_info->level + 1);
             size_t i = 1;
             while (sym == COMMA) {
                 getWord();
                 if (sym & first_exp) {
                     exp();
                     // 将实参传入即将调用的子过程
-                    PCodeList::emit(store, cur_info->level, i + ACT_PRE_REC_SIZE + level + 1);
+                    PCodeList::emit(store, -1, i + ACT_PRE_REC_SIZE + cur_info->level + 1);
                 } else {
                     judge(0, first_exp, REDUNDENT, L"','");
                     exp();
@@ -1084,7 +1086,7 @@ void statement()
             // 从命令行读一个数据到栈顶
             PCodeList::emit(red, 0, 0);
             // 将栈顶值送入变量所在地址
-            PCodeList::emit(store, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + level + 1);
+            PCodeList::emit(store, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + cur_info->level + 1);
             getWord();
         } else {
             judge(0, COMMA | RPAREN, MISSING, L"identifier");
@@ -1106,7 +1108,7 @@ void statement()
                 // 从命令行读一个数据到栈顶
                 PCodeList::emit(red, 0, 0);
                 // 将栈顶值送入变量所在地址
-                PCodeList::emit(store, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + level + 1);
+                PCodeList::emit(store, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + cur_info->level + 1);
                 getWord();
             } else {
                 judge(0, IDENT, REDUNDENT_WORD);
@@ -1194,6 +1196,7 @@ void block()
     // 为子过程开辟活动记录空间，其中为display开辟level + 1个单元
     size_t entry = PCodeList::emit(alloc, 0, SymTable::table[SymTable::display[level]].info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + level + 1);
     size_t target = SymTable::table[SymTable::display[level]].info->getEntry();
+    // 将过程入口地址回填至过程的跳转语句
     PCodeList::backpatch(target, entry);
     // <block> -> [<condecl>][<vardecl>][<proc>]<body>
     body();
@@ -1222,7 +1225,7 @@ void prog()
     }
     //  <prog> -> program {~id} ;
     else {
-        error(ILLEGAL_WORD, strToken.c_str());
+        error(ILLEGAL_WORD, (L"'" + strToken + L"'").c_str());
         getWord();
     }
     // <prog> -> program id;
@@ -1241,7 +1244,7 @@ void prog()
     block();
     //<prog> -> program id; <block>#
     // 执行返回，并弹栈
-    PCodeList::emit(opr, 0, 0);
+    // PCodeList::emit(opr, 0, 0);
     if (sym == NUL) {
         // 程序终止
         return;
@@ -1260,13 +1263,6 @@ void analyze()
 
 void PL0Test()
 {
-    init();
-    // string filename;
-    // wcout << L"请输入待编译的文件名称：" << endl;
-    // while (cin >> filename) {
-    //     readFile2USC2("E:\\Programming\\GitHub\\repository\\DataStruct\\complierPL0\\"
-    //     + filename); analyze(); wcout << L"请输入待编译的文件名称：" << endl;
-    // }
-    readFile2USC2(PROGM_PATH);
-    analyze();
+    // readFile2USC2(PROGM_PATH);
+    // analyze();
 }

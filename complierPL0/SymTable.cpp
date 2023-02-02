@@ -163,15 +163,20 @@ int SymTable::enterProc(wstring name)
 int SymTable::lookUpVar(wstring name)
 {
     unsigned int curAddr = 0;
+    // wcout << name << ": ";
     // i代表访问display的指针
     for (int i = level; i >= 0; i--) {
         curAddr = table[display[i]].next_item;
         // 遍历当前display指针指向的过程下的所有变量符号，直到遇到最后一个符号(pre == 0)
         do {
-            if (table[curAddr].name == name)
+            // wcout << table[curAddr].name << "\t";
+            if (table[curAddr].name == name) {
+                // wcout << endl;
                 return curAddr;
+            }
         } while (table[curAddr++].next_item != 0);
     }
+    // wcout << endl;
     return -1;
 }
 
