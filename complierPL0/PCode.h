@@ -6,8 +6,9 @@
 using namespace std;
 #define P_CODE_CNT 10
 #define UNIT_SIZE 4
-#define ACT_REC_SIZE 3
+#define ACT_PRE_REC_SIZE 3
 
+#define OPR_RETURN 0
 #define OPR_NEGTIVE 1
 #define OPR_ADD 2
 #define OPR_SUB 3
@@ -40,7 +41,7 @@ enum Operation {
 class PCode {
 public:
     Operation op; // 伪操作码
-    int L; // 层差：引用层 - 声明层
+    int L; // 层级
     int a; // 相对地址
     PCode(Operation op, int L, int a)
     {

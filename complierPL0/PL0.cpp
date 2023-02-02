@@ -1,4 +1,5 @@
 #include "PL0.h"
+#include "Interpreter.h"
 #include "PCode.h"
 #include "SymTable.h"
 #include <cstddef>
@@ -751,8 +752,6 @@ void proc()
         // <proc> -> procedure id ([id {,id}]);<block> {;<proc>}
         if (sym & first_block) {
             block();
-            // 过程返回至断点
-            PCodeList::emit(opr, 0, 15);
             // 执行返回，并弹栈
             PCodeList::emit(opr, 0, 0);
             level--;
@@ -824,14 +823,14 @@ void factor()
         else
             // 用临时变量记录当前查到的信息
             cur_info = (VarInfo*)SymTable::table[pos].info;
-        int L = level - cur_info->level;
+        int L = cur_info->level;
         if (cur_info->cat == Category::CST) {
             int val = cur_info->getValue();
             PCodeList::emit(lit, L, val);
         }
         // 若为变量，取左值
         else {
-            PCodeList::emit(load, L, cur_info->offset / UNIT_SIZE + ACT_REC_SIZE);
+            PCodeList::emit(load, L, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + level + 1);
         }
         getWord();
     } else if (sym == NUMBER) {
@@ -963,7 +962,7 @@ void statement()
         }
         exp();
         // 赋值的P代码，当前栈顶为计算出的表达式
-        PCodeList::emit(store, level - cur_info->level, cur_info->offset / UNIT_SIZE + ACT_REC_SIZE);
+        PCodeList::emit(store, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + level + 1);
     }
     // <statement> -> if <lexp> then <statement> [else <statement>]
     else if (sym == IF_SYM) {
@@ -1033,14 +1032,14 @@ void statement()
         if (sym & first_exp) {
             exp();
             // 将实参传入即将调用的子过程
-            PCodeList::emit(store, -1, ACT_REC_SIZE);
+            PCodeList::emit(store, cur_info->level, ACT_PRE_REC_SIZE + level + 1);
             size_t i = 1;
             while (sym == COMMA) {
                 getWord();
                 if (sym & first_exp) {
                     exp();
                     // 将实参传入即将调用的子过程
-                    PCodeList::emit(store, -1, i + ACT_REC_SIZE);
+                    PCodeList::emit(store, cur_info->level, i + ACT_PRE_REC_SIZE + level + 1);
                 } else {
                     judge(0, first_exp, REDUNDENT, L"','");
                     exp();
@@ -1055,7 +1054,7 @@ void statement()
         if (sym == RPAREN) {
             getWord();
             // 调用子过程
-            PCodeList::emit(call, level - cur_info->level, cur_info->entry);
+            PCodeList::emit(call, cur_info->level, cur_info->entry);
         }
     }
     // <statement> -> <body>
@@ -1085,7 +1084,7 @@ void statement()
             // 从命令行读一个数据到栈顶
             PCodeList::emit(red, 0, 0);
             // 将栈顶值送入变量所在地址
-            PCodeList::emit(store, level - cur_info->level, cur_info->offset / UNIT_SIZE + ACT_REC_SIZE);
+            PCodeList::emit(store, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + level + 1);
             getWord();
         } else {
             judge(0, COMMA | RPAREN, MISSING, L"identifier");
@@ -1107,7 +1106,7 @@ void statement()
                 // 从命令行读一个数据到栈顶
                 PCodeList::emit(red, 0, 0);
                 // 将栈顶值送入变量所在地址
-                PCodeList::emit(store, level - cur_info->level, cur_info->offset / UNIT_SIZE + ACT_REC_SIZE);
+                PCodeList::emit(store, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + level + 1);
                 getWord();
             } else {
                 judge(0, IDENT, REDUNDENT_WORD);
@@ -1192,8 +1191,8 @@ void block()
     if (sym == PROC_SYM) {
         proc();
     }
-    // 为子过程开辟空间
-    size_t entry = PCodeList::emit(alloc, 0, SymTable::table[SymTable::display[level]].info->offset / UNIT_SIZE + ACT_REC_SIZE);
+    // 为子过程开辟活动记录空间，其中为display开辟level + 1个单元
+    size_t entry = PCodeList::emit(alloc, 0, SymTable::table[SymTable::display[level]].info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + level + 1);
     size_t target = SymTable::table[SymTable::display[level]].info->getEntry();
     PCodeList::backpatch(target, entry);
     // <block> -> [<condecl>][<vardecl>][<proc>]<body>
@@ -1241,8 +1240,6 @@ void prog()
     //<prog> -> program id; <block>
     block();
     //<prog> -> program id; <block>#
-    // 过程返回至断点
-    PCodeList::emit(opr, 0, 15);
     // 执行返回，并弹栈
     PCodeList::emit(opr, 0, 0);
     if (sym == NUL) {
