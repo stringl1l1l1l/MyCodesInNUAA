@@ -39,3 +39,8 @@ void PCodeList::printCode()
         wcout << setw(4) << i << L"  " << op_map[code_list[i].op] << L", " << code_list[i].L << L", " << code_list[i].a << endl;
     }
 }
+
+void PCodeList::clear()
+{
+    code_list.clear();
+}

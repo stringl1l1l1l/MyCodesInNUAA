@@ -16,6 +16,6 @@ var res, i;
 		end
 	end
 begin
-	call fib(4);
+	call fib(30);
 	write(res)
 end

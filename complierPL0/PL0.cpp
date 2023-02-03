@@ -4,6 +4,7 @@
 #include "SymTable.h"
 #include <cstddef>
 #include <fcntl.h>
+#include <fstream>
 #include <io.h>
 #include <iomanip>
 #include <iostream>
@@ -18,24 +19,20 @@
 wchar_t w_ch = 32; // 用于词法分析器，存放最近一次从文件中读出的字符
 unsigned long sym; // 最近一次识别出来的 token 的类型
 wstring strToken; // 最近一次识别出来的标识符的名字
-wstring err_str;
 size_t strToken_len = 0; // 当前token长度
-size_t num; // 词法分析器输出结果之用，存放最近一次识别出来的数字的值
 size_t col_pos = 0; // 列指针
 size_t row_pos = 1; // 行指针
 size_t pre_word_col = 0; // 上一个非空白合法词尾列指针
 size_t pre_word_row = 1; // 上一个非空白合法词行指针
-size_t line_lenth; // 行缓冲区长度
 size_t err = 0; /* 出错总次数 */
 size_t level = 0; //  层差
-size_t maxLevel = 0;
 
-string progm_str;
 wstring progm_w_str; // 源程序代码的wchar字符串形式
 size_t progm_lenth;
 size_t ch_ptr;
 unordered_map<unsigned long, wstring> sym_map; // 保留字编号与字符串的映射
 wstring err_msg[ERR_CNT]; // 错误信息表
+ifstream file;
 
 // first集
 unsigned long first_block = CONST_SYM | VAR_SYM | PROC_SYM | BEGIN_SYM;
@@ -70,6 +67,28 @@ wchar_t opr_table[OPR_MAX] = { L'+', L'-', L'*', L'/', L'=', L'<',
     L'>', L'(', L')', L',', L';' };
 void init()
 {
+    w_ch = L' '; // 用于词法分析器，存放最近一次从文件中读出的字符
+    sym = NUL; // 最近一次识别出来的 token 的类型
+    strToken = L""; // 最近一次识别出来的标识符的名字
+    strToken_len = 0; // 当前token长度
+    col_pos = 0; // 列指针
+    row_pos = 1; // 行指针
+    pre_word_col = 0; // 上一个非空白合法词尾列指针
+    pre_word_row = 1; // 上一个非空白合法词行指针
+    err = 0; /* 出错总次数 */
+    level = 0; //  层差
+    progm_w_str = L""; // 源程序代码的wchar字符串形式
+    progm_lenth = 0;
+    // 清空原来的文件字符串
+    progm_w_str.clear();
+    // 重置字符指针
+    ch_ptr = 0;
+    // 清空符号表
+    SymTable::clear();
+    // 清空中间代码单元
+    PCodeList::clear();
+    // 清空运行单元
+    Interpreter::clear();
     // 以Unicode方式打开输入输出流
     _setmode(_fileno(stdout), _O_U16TEXT);
     SymTable::table.reserve(SYM_ITEMS_CNT);
@@ -159,12 +178,15 @@ void init()
 void readFile2USC2(string filename)
 {
     // 打开文件
-    fstream file(filename, ios::in);
+    file.open(filename);
     if (!file.is_open()) {
         wcout << L"cannot open file!" << endl;
         exit(0);
     }
     wcout << L"\e[32mCompiling file '" << filename.c_str() << L"'!\e[0m" << endl;
+
+    // 禁止过滤空白符
+    file >> noskipws;
     // 跳过 UTF8 BOM（0xEFBBBF）
     if (file.get() != 0xEF || file.get() != 0xBB || file.get() != 0xBF) {
         file.seekg(0, ios::beg);
@@ -172,10 +194,10 @@ void readFile2USC2(string filename)
 
     byte B; // 1字节
     wchar_t wchar; // 2字节存储UCS-2码点
-    wstring w_str; // 用于存储转换结果的 Unicode 码点序列
+    wstring w_str(L""); // 用于存储转换结果的 Unicode 码点序列
     int len; // 单个 UTF8 字符的编码长度
 
-    while ((B = file.get()) && !file.eof()) {
+    while ((file >> B) && !file.eof()) {
         // 单字节编码 0xxxxxxx
         if (B < 0b10000000) {
             wchar = B;
@@ -224,6 +246,9 @@ void readFile2USC2(string filename)
     }
     w_str.push_back(L'#');
     progm_w_str = w_str;
+    file.clear();
+    // file.seekg(0, file.beg);
+    file.close();
 }
 
 // // 读取待编译源代码文件
@@ -551,7 +576,6 @@ void getWord()
     }
     // wcout << L"(" << row_pos << L"," << col_pos << L")\t" << setw(15)
     //       << strToken << setw(20) << sym_map[sym] << endl;
-    err_str.clear();
 }
 
 // 当前符号不在s1中，则循环查找下一个在中s1 ∪ s2的符号，，一般来说，s2是follow集

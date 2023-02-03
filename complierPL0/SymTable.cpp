@@ -194,6 +194,15 @@ void SymTable::addWidth(size_t addr, size_t width)
     table[addr].info->offset = width;
 }
 
+void SymTable::clear()
+{
+    sp = 0;
+    table.clear();
+    display.clear();
+    offset_stk.clear();
+    proc_addrs.clear();
+}
+
 void symTableTest()
 {
     // wcout << L"SymTable____________________" << endl;

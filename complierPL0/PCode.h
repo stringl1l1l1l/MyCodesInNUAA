@@ -58,6 +58,7 @@ public:
     static int emit(Operation op, int L, int a);
     static void backpatch(size_t target, size_t addr);
     static void printCode();
+    static void clear();
 };
 
 #endif

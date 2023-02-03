@@ -286,3 +286,11 @@ void Interpreter::run()
         }
     }
 }
+
+void Interpreter::clear()
+{
+    running_stack.clear();
+    sp = 0;
+    top = 0;
+    pc = 0;
+}

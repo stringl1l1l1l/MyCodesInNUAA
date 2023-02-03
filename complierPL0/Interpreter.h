@@ -17,6 +17,7 @@ public:
     static vector<int> running_stack; // 数据运行栈
 
     static void run();
+    static void clear();
 
 private:
     static void lit(Operation op, int L, int a);

@@ -64,8 +64,6 @@ public:
     static vector<size_t> proc_addrs; // 所有过程的入口地址
 
 public:
-    SymTable();
-    ~SymTable();
     // 创建子符号表
     static void mkTable();
     // 将变量名登入符号表
@@ -76,6 +74,8 @@ public:
     // 查找符号在符号表中位置
     static int lookUpVar(wstring name);
     static int lookUpProc(wstring name);
+    // 清空符号表
+    static void clear();
 };
 
 void symTableTest();
