@@ -2,15 +2,15 @@
 #include <iomanip>
 #include <iostream>
 #include <ostream>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string>
 #include <vector>
 
-size_t SymTable::sp = 1;
+size_t SymTable::sp = 0;
 vector<SymTableItem> SymTable::table; // 一个程序唯一的符号表
-vector<size_t> SymTable::display(PROC_CNT, -1); // 过程的嵌套层次表
-vector<size_t> SymTable::proc_addrs; // 记录所有过程的地址
-vector<size_t> SymTable::offset_stk(PROC_CNT, 0);
+vector<size_t> SymTable::display; // 过程的嵌套层次表
+
 wstring cat_map[6] = {
     L"null",
     L"array",
@@ -78,6 +78,7 @@ ProcInfo::ProcInfo()
     : Information()
 {
     this->entry = 0;
+    this->isDefined = false;
 }
 
 void ProcInfo::setEntry(size_t entry) { this->entry = entry; }
@@ -100,99 +101,109 @@ void ProcInfo::show()
 
 void SymTableItem::show()
 {
-    wcout << setw(10) << name << setw(10) << next_item;
+    wcout << setw(10) << name << setw(10) << pre_item;
     info->show();
     wcout << endl;
 }
+
 void SymTable::mkTable()
 {
-    size_t top = table.size();
-    sp = top;
+    sp = table.size();
 }
 
 int SymTable::enter(wstring name, size_t offset, Category cat)
 {
-    int pos = lookUpVar(name);
-    // 如果在相同作用域有重复符号，且不为形参、过程名，则说明出现重定义
-    if (pos != -1 && table[pos].info->level == level
-        && table[pos].info->cat != Category::FORM) {
-        error(REDEFINED_IDENT, name.c_str());
-        return -1;
+    // 若为形参，则不需要检查
+    if (cat != Category::FORM) {
+        int pos = lookUp(name);
+        // 如果查找到重复符号，且必须在同一层级，不为形参、过程名，则说明出现变量名重定义
+        if (pos != -1
+            && table[pos].info->cat != Category::FORM
+            && table[pos].info->cat != Category::PROCE
+            && table[pos].info->level == level) {
+            error(REDEFINED_IDENT, name.c_str());
+            return -1;
+        }
     }
-    size_t top = table.size();
-    if (top >= 1)
-        table[top - 1].next_item = top;
+    // 记录当前即将登入的符号表项的地址
+    size_t cur_addr = table.size();
     SymTableItem item;
-    item.next_item = 0;
+    // 当前符号表项的前一项是display[level]
+    item.pre_item = display[level];
     item.name = name;
+    // 更新display[level]为当前符号表项的地址
+    display[level] = cur_addr;
     VarInfo* varInfo = new VarInfo;
     varInfo->offset = offset;
     varInfo->cat = cat;
     varInfo->level = level;
+    varInfo->value = 0;
     item.info = varInfo;
     table.push_back(item);
-    return top;
+    wcout << setw(5) << table[cur_addr].name << setw(5) << table[cur_addr].pre_item << endl;
+    // 返回当前符号表项的地址
+    return cur_addr;
 }
 
 int SymTable::enterProc(wstring name)
 {
-    // 若在相同作用域内有重复过程名
-    int pos = lookUpProc(name);
-    if (pos != -1) {
+    // 若查找到重复符号，且为同一层级的过程名，则出现过程重定义
+    int pos = lookUp(name);
+    if (pos != -1
+        && table[pos].info->cat == Category::PROCE
+        && table[pos].info->level == level + 1) {
         error(REDEFINED_PROC, name.c_str());
         return -1;
     }
-    // 更新当前display表项为当前子过程的符号表地址
-    display[level] = sp;
-    // 初始化level处的值
-    offset_stk[level] = 0;
-
-    size_t top = table.size();
+    size_t cur_addr = table.size();
     SymTableItem item;
-    item.next_item = 0;
+    // 当前符号表项的前一项是display[level]
+    item.pre_item = display[level];
+    item.name = name;
+    // 更新display[level]为当前符号表项的地址
+    display[level] = cur_addr;
+    ProcInfo* procInfo = new ProcInfo;
+    procInfo->offset = 0;
+    procInfo->cat = Category::PROCE;
+    procInfo->level = level + 1;
+    procInfo->entry = 0;
+    item.info = procInfo;
+    table.push_back(item);
+    wcout << setw(5) << table[cur_addr].name << setw(5) << table[cur_addr].pre_item << endl;
+    // 返回当前符号表项的地址
+    return cur_addr;
+}
+
+void SymTable::enterProgm(wstring name)
+{
+    SymTableItem item;
+    item.pre_item = 0;
     item.name = name;
     ProcInfo* procInfo = new ProcInfo;
     procInfo->offset = 0;
     procInfo->cat = Category::PROCE;
-    procInfo->level = level;
+    procInfo->level = 0;
     item.info = procInfo;
     table.push_back(item);
-    proc_addrs.push_back(top);
-    return top;
 }
 
-int SymTable::lookUpVar(wstring name)
+int SymTable::lookUp(wstring name)
 {
     unsigned int curAddr = 0;
-    // wcout << name << ": ";
     // i代表访问display的指针
+    // 若查找主过程名，直接返回-1
+    if (level == 0 && display[0] == 0)
+        return -1;
     for (int i = level; i >= 0; i--) {
-        curAddr = table[display[i]].next_item;
+        curAddr = display[i];
         // 遍历当前display指针指向的过程下的所有变量符号，直到遇到最后一个符号(pre == 0)
-        do {
-            // wcout << table[curAddr].name << "\t";
+        while (1) {
             if (table[curAddr].name == name) {
-                // wcout << endl;
                 return curAddr;
             }
-        } while (table[curAddr++].next_item != 0);
-    }
-    // wcout << endl;
-    return -1;
-}
-
-int SymTable::lookUpProc(wstring name)
-{
-    // for (size_t addr : proc_addrs) {
-    //     if (table[addr].name == name)
-    //         return addr;
-    // }
-    // return -1;
-    // i代表访问display的指针
-    for (int i = level; i >= 0; i--) {
-        // 遍历当前display指针指向的过程下的所有过程符号，直到i = 0
-        if (table[display[i]].name == name) {
-            return display[i];
+            if (table[curAddr].pre_item == 0)
+                break;
+            curAddr = table[curAddr].pre_item;
         }
     }
     return -1;
@@ -201,6 +212,7 @@ int SymTable::lookUpProc(wstring name)
 void SymTable::addWidth(size_t addr, size_t width)
 {
     table[addr].info->offset = width;
+    glo_offset = 0;
 }
 
 void SymTable::clear()
@@ -208,8 +220,8 @@ void SymTable::clear()
     sp = 0;
     table.clear();
     display.clear();
-    offset_stk.clear();
-    proc_addrs.clear();
+    table.reserve(SYM_ITEMS_CNT);
+    display.resize(1, 0);
 }
 
 void symTableTest()
@@ -242,19 +254,9 @@ void symTableTest()
     wcout << L"___________________________________________________________________________________________________________" << endl;
     wcout << L"________________display________________" << endl;
     wcout << setw(10) << L"addr" << setw(10) << L"proc" << endl;
-    for (int i = 0; i < PROC_CNT; i++) {
+    for (int i = 0; i < SymTable::display.size(); i++) {
         int mem = SymTable::display[i];
         if (mem != -1)
             wcout << setw(10) << mem << setw(10) << SymTable::table[mem].name << endl;
     }
-    wcout << L"_______________________________________" << endl;
-    wcout << L"_______________proc_size_______________" << endl;
-    wcout << setw(10) << L"proc" << setw(10) << L"size" << endl;
-    for (int i = 0; i < SymTable::proc_addrs.size(); i++) {
-        wcout << setw(10)
-              << SymTable::table[SymTable::proc_addrs[i]].name
-              << setw(10)
-              << SymTable::table[SymTable::proc_addrs[i]].info->offset << endl;
-    }
-    wcout << L"_______________________________________" << endl;
 }

@@ -12,9 +12,8 @@ var j,sum,x;
 	   j:=j+1
 	end;
 	write(sum)
-      end
+     end
 begin
      read(x,j);
-     call sum1(j+5);
-     write(j)
+     call sum1(j);
 end

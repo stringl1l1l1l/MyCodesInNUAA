@@ -24,8 +24,9 @@ size_t col_pos = 0; // 列指针
 size_t row_pos = 1; // 行指针
 size_t pre_word_col = 0; // 上一个非空白合法词尾列指针
 size_t pre_word_row = 1; // 上一个非空白合法词行指针
-size_t err = 0; /* 出错总次数 */
+size_t err_cnt = 0; /* 出错总次数 */
 size_t level = 0; //  层差
+size_t glo_offset = 0;
 
 wstring progm_w_str; // 源程序代码的wchar字符串形式
 size_t progm_lenth;
@@ -75,10 +76,11 @@ void init()
     row_pos = 1; // 行指针
     pre_word_col = 0; // 上一个非空白合法词尾列指针
     pre_word_row = 1; // 上一个非空白合法词行指针
-    err = 0; /* 出错总次数 */
+    err_cnt = 0; /* 出错总次数 */
     level = 0; //  层差
     progm_w_str = L""; // 源程序代码的wchar字符串形式
     progm_lenth = 0;
+    glo_offset = 0;
     // 清空原来的文件字符串
     progm_w_str.clear();
     // 重置字符指针
@@ -91,8 +93,6 @@ void init()
     Interpreter::clear();
     // 以Unicode方式打开输入输出流
     _setmode(_fileno(stdout), _O_U16TEXT);
-    SymTable::table.reserve(SYM_ITEMS_CNT);
-    SymTable::display.resize(PROC_CNT);
     // 符号名表初始化
     sym_map[NUL] = L"NUL";
     sym_map[IDENT] = L"IDENT";
@@ -159,9 +159,10 @@ void init()
     err_msg[EXPECT_SEMICOLON_FIND_COMMA] = L"Found ',' when ';' expected";
     // redundant错误
     err_msg[REDUNDENT] = L"Redundent %s";
-    err_msg[REDUNDENT_WORD] = L"Redundent words when program should done";
+    err_msg[REDUNDENT_WORD] = L"Redundent word %s";
     // 其他错误
     err_msg[INCOMPATIBLE_VAR_LIST] = L"The real variable list is incompatible with formal variable list";
+    err_msg[UNDEFINED_PROC] = L"Calling undefined procedure %s";
 }
 
 /*UTF8 编码格式（xxx 是用来填充二进制 Unicode 码点的）
@@ -274,14 +275,14 @@ void error(size_t n, const wchar_t* extra)
 {
     wchar_t msg[200];
     wsprintf(msg, err_msg[n].c_str(), extra);
-    err++;
+    err_cnt++;
     wcout << L"\e[31m(" << pre_word_row << "," << pre_word_col << L")"
           << L" Error: " << msg << L"\e[0m " << endl;
 }
 
 void error(size_t n)
 {
-    err++;
+    err_cnt++;
     wcout << L"\e[31m(" << pre_word_row << "," << pre_word_col << L")"
           << L" Error: " << err_msg[n] << L"\e[0m " << endl;
 }
@@ -290,15 +291,14 @@ void error(size_t n)
 void over()
 {
 
-    if (err == 0) {
+    if (err_cnt == 0) {
         wcout << L"\e[32mNo error. Congratulations!\e[0m" << endl;
         wcout << L"\e[32m______________________________Compile compelete!________________________________\e[0m\n"
               << endl;
     } else {
-        wcout << L"\e[31mTotol: " << err << L" errors\e[0m" << endl;
+        wcout << L"\e[31mTotol: " << err_cnt << L" errors\e[0m" << endl;
         wcout << L"\e[33m_______________________________Compile failed!_________________________________\e[0m\n"
               << endl;
-        exit(-1);
     }
 }
 
@@ -686,8 +686,8 @@ void vardecl()
         // var <id>
         if (sym == IDENT) {
             // 将标识符登入到符号表
-            SymTable::enter(strToken, SymTable::offset_stk[level], Category::VAR);
-            SymTable::offset_stk[level] += VAR_WIDTH;
+            SymTable::enter(strToken, glo_offset, Category::VAR);
+            glo_offset += VAR_WIDTH;
             getWord();
         } else {
             judge(0, COMMA, MISSING, L"identifier");
@@ -697,8 +697,8 @@ void vardecl()
             getWord();
             if (sym == IDENT) {
                 // 将标识符登入到符号表
-                SymTable::enter(strToken, SymTable::offset_stk[level], Category::VAR);
-                SymTable::offset_stk[level] += VAR_WIDTH;
+                SymTable::enter(strToken, glo_offset, Category::VAR);
+                glo_offset += VAR_WIDTH;
                 getWord();
             } else {
                 error(REDUNDENT, L"','"); // todo expect 标识符
@@ -718,7 +718,6 @@ void vardecl()
 // <proc> -> procedure id ([id {,id}]);<block> {;<proc>}
 void proc()
 {
-    level++;
     if (sym == PROC_SYM) {
         getWord();
         // <proc> -> procedure id
@@ -727,16 +726,21 @@ void proc()
             // 将过程名登入符号表
             SymTable::mkTable();
             int cur_proc = SymTable::enterProc(strToken);
-            cur_info = (ProcInfo*)SymTable::table[cur_proc].info;
-            // 子过程的入口地址登入符号表，待回填
-            size_t entry = PCodeList::emit(jmp, 0, 0);
-            SymTable::table[SymTable::table.size() - 1].info->setEntry(entry);
+            if (cur_proc != -1) {
+                cur_info = (ProcInfo*)SymTable::table[cur_proc].info;
+                // 子过程的入口地址登入符号表，待回填
+                size_t entry = PCodeList::emit(jmp, 0, 0);
+                SymTable::table[SymTable::table.size() - 1].info->setEntry(entry);
+            }
             getWord();
         } else {
             judge(0, LPAREN, MISSING, L"identifier");
         }
         // <proc> -> procedure id (
         if (sym == LPAREN) {
+            // 层级增加，display表扩张
+            SymTable::display.push_back(0);
+            level++;
             getWord();
         } else {
             judge(0, IDENT | RPAREN, MISSING, L"'('");
@@ -745,17 +749,19 @@ void proc()
         // 分析至形参列表
         if (sym == IDENT) {
             // 将过程的形参登入符号表，并与相应的过程绑定
-            int form_var = SymTable::enter(strToken, SymTable::offset_stk[level], Category::FORM);
-            SymTable::offset_stk[level] += VAR_WIDTH;
-            cur_info->form_var_list.push_back(form_var);
+            int form_var = SymTable::enter(strToken, glo_offset, Category::FORM);
+            glo_offset += VAR_WIDTH;
+            if (cur_info)
+                cur_info->form_var_list.push_back(form_var);
             getWord();
             while (sym == COMMA) {
                 getWord();
                 if (sym == IDENT) {
                     // 将过程的形参登入符号表，并与相应的过程绑定
-                    int form_var = SymTable::enter(strToken, SymTable::offset_stk[level], Category::FORM);
-                    SymTable::offset_stk[level] += VAR_WIDTH;
-                    cur_info->form_var_list.push_back(form_var);
+                    int form_var = SymTable::enter(strToken, glo_offset, Category::FORM);
+                    glo_offset += VAR_WIDTH;
+                    if (cur_info)
+                        cur_info->form_var_list.push_back(form_var);
                     getWord();
                 } else {
                     error(REDUNDENT, L"','");
@@ -777,8 +783,13 @@ void proc()
         // <proc> -> procedure id ([id {,id}]);<block> {;<proc>}
         if (sym & first_block) {
             block();
+            // 过程体结束，过程已定义
+            if (cur_info)
+                cur_info->isDefined = true;
             // 执行返回，并弹栈
             PCodeList::emit(opr, 0, OPR_RETURN);
+            // 层级减少，display表弹出
+            SymTable::display.pop_back();
             level--;
             // 当前过程结束，开始分析下面的过程
             while (sym == SEMICOLON) {
@@ -827,7 +838,7 @@ void exp()
                 else
                     PCodeList::emit(opr, 0, OPR_ADD);
             } else {
-                error(REDUNDENT_WORD);
+                error(REDUNDENT, strToken.c_str());
             }
         }
     } else {
@@ -840,21 +851,27 @@ void factor()
 {
     if (sym == IDENT) {
         // 查找变量符号
-        int pos = SymTable::lookUpVar(strToken);
+        int pos = SymTable::lookUp(strToken);
         VarInfo* cur_info = nullptr;
         if (pos == -1)
             error(UNDECLARED_IDENT, strToken.c_str());
         // 若为常量，直接获取其符号表中的右值
-        else
+        else if (SymTable::table[pos].info->cat != Category::PROCE)
             // 用临时变量记录当前查到的信息
             cur_info = (VarInfo*)SymTable::table[pos].info;
-        if (cur_info->cat == Category::CST) {
-            int val = cur_info->getValue();
-            PCodeList::emit(lit, cur_info->level, val);
-        }
-        // 若为变量，取左值
+        // 查找到重名的过程符号
         else {
-            PCodeList::emit(load, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + cur_info->level + 1);
+            // todo
+        }
+        if (cur_info) {
+            if (cur_info->cat == Category::CST) {
+                int val = cur_info->getValue();
+                PCodeList::emit(lit, cur_info->level, val);
+            }
+            // 若为变量，取左值
+            else {
+                PCodeList::emit(load, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + cur_info->level + 1);
+            }
         }
         getWord();
     } else if (sym == NUMBER) {
@@ -892,7 +909,7 @@ void term()
                 else
                     PCodeList::emit(opr, 0, OPR_DIVIS);
             } else {
-                error(REDUNDENT_WORD);
+                error(REDUNDENT, strToken.c_str());
             }
         }
     } else {
@@ -963,17 +980,21 @@ void statement()
     // <statement> -> id := <exp>
     if (sym == IDENT) {
         // 查找当前变量是否在符号表中
-        int pos = SymTable::lookUpVar(strToken);
+        int pos = SymTable::lookUp(strToken);
         VarInfo* cur_info = nullptr;
         // 未查找到符号
         if (pos == -1)
             error(UNDECLARED_IDENT, strToken.c_str());
-        else // 用临时变量记录当前查到的信息
+        else if (SymTable::table[pos].info->cat != Category::PROCE) // 用临时变量记录当前查到的信息
             cur_info = (VarInfo*)SymTable::table[pos].info;
+        // 查找到重名的过程符号
+        else {
+            // todo
+        };
         getWord();
         if (sym == ASSIGN) {
             // 查找到右值，右值不可被赋值
-            if (pos != -1 && cur_info->cat == Category::CST)
+            if (cur_info && cur_info->cat == Category::CST)
                 error(ILLEGAL_RVALUE_ASSIGN);
             getWord();
         } // 不是赋值号：=而是等于号=
@@ -985,8 +1006,9 @@ void statement()
             judge(0, follow_exp, MISSING, L"':='");
         }
         exp();
-        // 赋值的P代码，当前栈顶为计算出的表达式
-        PCodeList::emit(store, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + cur_info->level + 1);
+        if (cur_info)
+            // 赋值的P代码，当前栈顶为计算出的表达式
+            PCodeList::emit(store, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + cur_info->level + 1);
     }
     // <statement> -> if <lexp> then <statement> [else <statement>]
     else if (sym == IF_SYM) {
@@ -1041,12 +1063,19 @@ void statement()
         ProcInfo* cur_info = nullptr;
         if (sym == IDENT) {
             // 查找过程的符号名
-            int pos = SymTable::lookUpProc(strToken);
+            int pos = SymTable::lookUp(strToken);
             // 未查找到过程名
             if (pos == -1)
                 error(UNDECLARED_PROC, strToken.c_str());
-            else
+            else if (SymTable::table[pos].info->cat == Category::PROCE)
                 cur_info = (ProcInfo*)SymTable::table[pos].info;
+            // 查找到重名的非过程符号
+            else {
+                // todo
+            }
+            // 若调用未定义的过程
+            if (cur_info && !cur_info->isDefined)
+                error(UNDEFINED_PROC, strToken.c_str());
             getWord();
         } else {
             judge(0, LPAREN, MISSING, L"identifier");
@@ -1059,14 +1088,16 @@ void statement()
         if (sym & first_exp) {
             exp();
             // 将实参传入即将调用的子过程
-            PCodeList::emit(store, -1, ACT_PRE_REC_SIZE + cur_info->level + 1);
+            if (cur_info)
+                PCodeList::emit(store, -1, ACT_PRE_REC_SIZE + cur_info->level + 1);
             size_t i = 1;
             while (sym == COMMA) {
                 getWord();
                 if (sym & first_exp) {
                     exp();
                     // 将实参传入即将调用的子过程
-                    PCodeList::emit(store, -1, i + ACT_PRE_REC_SIZE + cur_info->level + 1);
+                    if (cur_info)
+                        PCodeList::emit(store, -1, i + ACT_PRE_REC_SIZE + cur_info->level + 1);
                 } else {
                     judge(0, first_exp, REDUNDENT, L"','");
                     exp();
@@ -1074,14 +1105,15 @@ void statement()
                 i++;
             }
             // 若实参列表与形参列表变量数不兼容，报错
-            if (i != cur_info->form_var_list.size()) {
+            if (cur_info && i != cur_info->form_var_list.size()) {
                 error(INCOMPATIBLE_VAR_LIST);
             }
         }
         if (sym == RPAREN) {
             getWord();
             // 调用子过程
-            PCodeList::emit(call, cur_info->level, cur_info->entry);
+            if (cur_info)
+                PCodeList::emit(call, cur_info->level, cur_info->entry);
         }
     }
     // <statement> -> <body>
@@ -1097,21 +1129,26 @@ void statement()
             judge(0, IDENT, MISSING, L"'('");
         }
         if (sym == IDENT) {
-            int pos = SymTable::lookUpVar(strToken);
+            int pos = SymTable::lookUp(strToken);
             // 未查找到符号
             VarInfo* cur_info = nullptr;
             if (pos == -1)
                 error(UNDECLARED_IDENT, strToken.c_str());
-            else
+            else if (SymTable::table[pos].info->cat != Category::PROCE)
                 // 用临时变量记录当前查到的信息
                 cur_info = (VarInfo*)SymTable::table[pos].info;
+            // 查找到重名的过程符号
+            else {
+                // todo
+            }
             // 右值不可被赋值
-            if (pos != -1 && cur_info->cat == Category::CST)
+            if (cur_info && cur_info->cat == Category::CST) {
                 error(ILLEGAL_RVALUE_ASSIGN);
-            // 从命令行读一个数据到栈顶
-            PCodeList::emit(red, 0, 0);
-            // 将栈顶值送入变量所在地址
-            PCodeList::emit(store, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + cur_info->level + 1);
+                // 从命令行读一个数据到栈顶
+                PCodeList::emit(red, 0, 0);
+                // 将栈顶值送入变量所在地址
+                PCodeList::emit(store, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + cur_info->level + 1);
+            }
             getWord();
         } else {
             judge(0, COMMA | RPAREN, MISSING, L"identifier");
@@ -1119,24 +1156,29 @@ void statement()
         while (sym == COMMA) {
             getWord();
             if (sym == IDENT) {
-                int pos = SymTable::lookUpVar(strToken);
+                int pos = SymTable::lookUp(strToken);
                 // 未查找到符号
                 VarInfo* cur_info = nullptr;
                 if (pos == -1)
                     error(UNDECLARED_IDENT, strToken.c_str());
-                else
+                else if (SymTable::table[pos].info->cat != Category::PROCE)
                     // 用临时变量记录当前查到的信息
                     cur_info = (VarInfo*)SymTable::table[pos].info;
+                // 查找到重名的过程符号
+                else {
+                    // todo
+                }
                 // 右值不可被赋值
-                if (pos != -1 && cur_info->cat == Category::CST)
+                if (cur_info && cur_info->cat == Category::CST) {
                     error(ILLEGAL_RVALUE_ASSIGN);
-                // 从命令行读一个数据到栈顶
-                PCodeList::emit(red, 0, 0);
-                // 将栈顶值送入变量所在地址
-                PCodeList::emit(store, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + cur_info->level + 1);
+                    // 从命令行读一个数据到栈顶
+                    PCodeList::emit(red, 0, 0);
+                    // 将栈顶值送入变量所在地址
+                    PCodeList::emit(store, cur_info->level, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + cur_info->level + 1);
+                }
                 getWord();
             } else {
-                judge(0, IDENT, REDUNDENT_WORD);
+                judge(0, IDENT, REDUNDENT, strToken.c_str());
             }
         }
         if (sym == RPAREN) {
@@ -1190,7 +1232,7 @@ void body()
         if (sym & first_stmt) {
             statement();
         } else {
-            error(REDUNDENT_WORD);
+            error(REDUNDENT, L"';'");
         }
     }
     // 判断是否缺少end
@@ -1211,16 +1253,17 @@ void block()
         vardecl();
     }
     // 将过程所需的内存大小写入符号表
+    size_t cur_proc = SymTable::sp;
     SymTable::addWidth(
-        SymTable::display[level],
-        SymTable::offset_stk[level]);
+        cur_proc,
+        glo_offset);
     // <block> -> [<condecl>][<vardecl>][<proc>]]
     if (sym == PROC_SYM) {
         proc();
     }
     // 为子过程开辟活动记录空间，其中为display开辟level + 1个单元
-    size_t entry = PCodeList::emit(alloc, 0, SymTable::table[SymTable::display[level]].info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + level + 1);
-    size_t target = SymTable::table[SymTable::display[level]].info->getEntry();
+    size_t entry = PCodeList::emit(alloc, 0, SymTable::table[cur_proc].info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + level + 1);
+    size_t target = SymTable::table[cur_proc].info->getEntry();
     // 将过程入口地址回填至过程的跳转语句
     PCodeList::backpatch(target, entry);
     // <block> -> [<condecl>][<vardecl>][<proc>]<body>
@@ -1236,7 +1279,7 @@ void prog()
     if (sym == IDENT) {
         // 将过程名登入符号表
         SymTable::mkTable();
-        SymTable::enterProc(strToken);
+        SymTable::enterProgm(strToken);
         getWord();
     }
     // 错误 <prog> -> program number

@@ -4,6 +4,7 @@
 #include "PL0.h"
 #include <iomanip>
 #include <string>
+#include <sys/stat.h>
 #include <vector>
 
 using namespace std;
@@ -36,6 +37,7 @@ public:
 // 过程信息，继承信息类型
 class ProcInfo : public Information {
 public:
+    bool isDefined;// 过程是否定义的标识
     size_t entry; // 过程的中间代码入口地址
     vector<size_t> form_var_list; // 过程的形参入口地址列表
 
@@ -48,7 +50,7 @@ public:
 // 符号表项
 class SymTableItem {
 public:
-    unsigned int next_item;
+    unsigned int pre_item;
     Information* info;
     wstring name; // 符号名
     void show();
@@ -60,8 +62,6 @@ public:
     static size_t sp; // 指向当前子过程符号表的首地址
     static vector<SymTableItem> table; // 一个程序唯一的符号表
     static vector<size_t> display; // 过程的嵌套层次表
-    static vector<size_t> offset_stk; // 过程的内存大小记录
-    static vector<size_t> proc_addrs; // 所有过程的入口地址
 
 public:
     // 创建子符号表
@@ -71,9 +71,9 @@ public:
     static void addWidth(size_t addr, size_t width);
     // 将过程名登入符号表
     static int enterProc(wstring name);
+    static void enterProgm(wstring name);
     // 查找符号在符号表中位置
-    static int lookUpVar(wstring name);
-    static int lookUpProc(wstring name);
+    static int lookUp(wstring name);
     // 清空符号表
     static void clear();
 };

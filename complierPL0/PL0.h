@@ -97,6 +97,7 @@ using namespace std;
 #define REDEFINED_PROC 26
 
 #define INCOMPATIBLE_VAR_LIST 27
+#define UNDEFINED_PROC 28
 // 全局变量声明
 extern wchar_t w_ch; // 最近一次从文件中读出的字符
 extern unsigned long sym; // 最近一次识别出来的 token 的类型
@@ -104,8 +105,9 @@ extern wstring strToken; // 最近一次识别出来的token的名字
 extern size_t strToken_len; // 当前token长度
 extern size_t col_pos; // 列指针
 extern size_t row_pos; // 行指针
-extern size_t err; // 出错总次数
-extern size_t level; //  层差
+extern size_t err_cnt; // 出错总次数
+extern size_t level; // 层差
+extern size_t glo_offset; // 全局offset
 
 extern wstring progm_w_str; // 源程序代码的wchar字符串形式
 extern size_t progm_lenth; // 源程序代码的字符数量
