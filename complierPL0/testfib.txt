@@ -1,5 +1,5 @@
 program p;
-var res, i;
+var n, res, i;
 	procedure fib(n);
 	var sum;
 	begin
@@ -16,6 +16,7 @@ var res, i;
 		end
 	end
 begin
-	call fib(30);
+	read(n);
+	call fib(n);
 	write(res)
 end

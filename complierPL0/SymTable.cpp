@@ -108,7 +108,6 @@ void SymTable::mkTable()
 {
     size_t top = table.size();
     sp = top;
-    display[level] = sp;
 }
 
 int SymTable::enter(wstring name, size_t offset, Category cat)
@@ -139,10 +138,12 @@ int SymTable::enterProc(wstring name)
 {
     // 若在相同作用域内有重复过程名
     int pos = lookUpProc(name);
-    if (pos != -1 && SymTable::table[pos].info->level == level) {
-        error(REDEFINED_IDENT, name.c_str());
+    if (pos != -1) {
+        error(REDEFINED_PROC, name.c_str());
         return -1;
     }
+    // 更新当前display表项为当前子过程的符号表地址
+    display[level] = sp;
     // 初始化level处的值
     offset_stk[level] = 0;
 
@@ -182,9 +183,17 @@ int SymTable::lookUpVar(wstring name)
 
 int SymTable::lookUpProc(wstring name)
 {
-    for (size_t addr : proc_addrs) {
-        if (table[addr].name == name)
-            return addr;
+    // for (size_t addr : proc_addrs) {
+    //     if (table[addr].name == name)
+    //         return addr;
+    // }
+    // return -1;
+    // i代表访问display的指针
+    for (int i = level; i >= 0; i--) {
+        // 遍历当前display指针指向的过程下的所有过程符号，直到i = 0
+        if (table[display[i]].name == name) {
+            return display[i];
+        }
     }
     return -1;
 }

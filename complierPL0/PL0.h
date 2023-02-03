@@ -94,8 +94,9 @@ using namespace std;
 #define UNDECLARED_PROC 24
 
 #define REDEFINED_IDENT 25
+#define REDEFINED_PROC 26
 
-#define INCOMPATIBLE_VAR_LIST 26
+#define INCOMPATIBLE_VAR_LIST 27
 // 全局变量声明
 extern wchar_t w_ch; // 最近一次从文件中读出的字符
 extern unsigned long sym; // 最近一次识别出来的 token 的类型

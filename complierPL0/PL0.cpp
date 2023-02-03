@@ -135,6 +135,7 @@ void init()
     err_msg[UNDECLARED_PROC] = L"Undeclared procedure name %s";
     // redefined错误
     err_msg[REDEFINED_IDENT] = L"Redefined identifier %s";
+    err_msg[REDEFINED_PROC] = L"Redefined procedure name %s";
     // illegal错误
     err_msg[ILLEGAL_WORD] = L"Illegal word %s";
     err_msg[ILLEGAL_EXP] = L"Illegal exp definition";
