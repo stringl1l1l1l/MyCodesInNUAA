@@ -13,9 +13,9 @@ var res, i;
 			call fib(n-2);
 			sum := sum + res;
 			res := sum
-		end;
-		write(res)
+		end
 	end
 begin
-	call fib(2)
+	call fib(4);
+	write(res)
 end

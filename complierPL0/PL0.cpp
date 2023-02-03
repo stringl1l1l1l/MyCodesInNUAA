@@ -973,13 +973,13 @@ void statement()
         if (sym == THEN_SYM) {
             // 条件为假跳转，待回填else入口地址
             entry_jpc = PCodeList::emit(jpc, 0, 0);
-            // 待回填if外的入口地址
-            entry_jmp = PCodeList::emit(jmp, 0, 0);
             getWord();
         } else {
             judge(0, first_stmt, MISSING, L"then");
         }
         statement();
+        // 待回填if外的入口地址
+        entry_jmp = PCodeList::emit(jmp, 0, 0);
         if (sym == ELSE_SYM) {
             getWord();
             // 将else入口地址回填至jpc

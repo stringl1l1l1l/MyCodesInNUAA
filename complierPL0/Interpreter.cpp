@@ -20,13 +20,16 @@ void Interpreter::opr(Operation op, int L, int a)
     // top-1为数据栈顶，top-2为数据次栈顶
     // opr 0 0 执行断点返回并弹栈
     if (a == OPR_RETURN) {
-        // 恢复断点
-        pc = running_stack[sp + RA];
+        // 恢复断点，此处-1是因为这个函数末尾有个+1，debug了半天才发现
+        pc = running_stack[sp + RA] - 1;
+        int old_sp = running_stack[sp + DL];
         // 将当前过程活动记录全部弹栈
-        for (int i = 0; i <= top - sp; i++) {
+        for (int i = 0; i < top - sp; i++) {
             running_stack.pop_back();
         }
         top -= top - sp;
+        // 恢复老sp
+        sp = old_sp;
     } else if (a == OPR_NEGTIVE) {
         // 栈顶取反(反码 + 1)
         running_stack[top - 1] = ~running_stack[top - 1] + 1;
@@ -245,7 +248,7 @@ void Interpreter::run()
 {
     // 按照pc的指示运行程序
     for (int i = 0; i < PCodeList::code_list.size(); i = pc) {
-        wcout << pc << endl;
+        // wcout << pc << endl;
         PCode code = PCodeList::code_list[i];
         switch (code.op) {
         case Operation::lit:
