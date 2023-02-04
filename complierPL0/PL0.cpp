@@ -150,13 +150,11 @@ void init()
     err_msg[ILLEGAL_STMT] = L"Illegal statment definition";
     err_msg[ILLEGAL_RVALUE_ASSIGN] = L"Cannot assign a rvalue";
     // expect错误
-    err_msg[EXPECT_BECOMES_NOT_EQL] = L"Found '=' when expecting ':='";
+    err_msg[EXPECT_STH_FIND_ANTH] = L"Expecting '%s' but '%s' was found";
     err_msg[EXPECT_NUMEBR_AFTER_BECOMES] = L"There must be a number to follow '='";
     err_msg[EXPECT_STATEMENT] = L"Expecting statement";
     err_msg[EXPECT_EXPRESSION] = L"Expecting expression";
     err_msg[EXPECT_CONST] = L"Expecting const";
-    err_msg[EXPECT_IDENT_FIND_NUM] = L"Find number when identifier expected";
-    err_msg[EXPECT_SEMICOLON_FIND_COMMA] = L"Found ',' when ';' expected";
     // redundant错误
     err_msg[REDUNDENT] = L"Redundent %s";
     err_msg[REDUNDENT_WORD] = L"Redundent word %s";
@@ -183,7 +181,7 @@ void readFile2USC2(string filename)
     file.open(filename);
     if (!file.is_open()) {
         wcout << L"cannot open file!" << endl;
-        exit(0);
+        return;
     }
     wcout << L"\e[32mCompiling file '" << filename.c_str() << L"'!\e[0m" << endl;
 
@@ -208,7 +206,7 @@ void readFile2USC2(string filename)
             // 超出可用 Unicode 范围
             if (B > 0b11110100) {
                 wcout << L"Invalid unicode range" << endl;
-                exit(0);
+                return;
             } // 4字节编码 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
             else if (B >= 0b11110000) {
                 len = 4;
@@ -223,7 +221,7 @@ void readFile2USC2(string filename)
             } else {
                 // 除单字节外，首字节不能小于 0b11000000
                 wcout << L"Invalid utf8 leading code" << endl;
-                exit(0);
+                return;
             }
             // 通过左移再右移的方法去掉首字节中的 UTF8 标记
             B = B << (len + 1);
@@ -235,7 +233,7 @@ void readFile2USC2(string filename)
                 // 后续编码必须是 0b10xxxxxx 格式
                 if (B >= 0b11000000) {
                     wcout << L"Invalid utf8 tailing code" << endl;
-                    exit(0);
+                    return;
                 }
                 len--;
                 B = B & 0b00111111; // 去掉 UTF8 标记
@@ -271,26 +269,33 @@ void readFile2USC2(string filename)
 // }
 
 // 打印错误信息
-void error(size_t n, const wchar_t* extra)
+void printPreWord(const wchar_t msg[])
 {
-    wchar_t msg[200];
-    wsprintf(msg, err_msg[n].c_str(), extra);
-    err_cnt++;
     wcout << L"\e[31m(" << pre_word_row << "," << pre_word_col << L")"
           << L" Error: " << msg << L"\e[0m " << endl;
 }
 
-void error(size_t n)
+void printCurWord(const wchar_t msg[])
 {
+    wcout << L"\e[31m(" << row_pos << "," << col_pos - 1 << L")"
+          << L" Error: " << msg << L"\e[0m " << endl;
+}
+
+template <class... T>
+void error(size_t n, T... extra)
+{
+    wchar_t msg[200] = L"";
+    wsprintf(msg, err_msg[n].c_str(), extra...);
     err_cnt++;
-    wcout << L"\e[31m(" << pre_word_row << "," << pre_word_col << L")"
-          << L" Error: " << err_msg[n] << L"\e[0m " << endl;
+    if (n == REDUNDENT || n == REDUNDENT_WORD || n == MISSING)
+        printPreWord(msg);
+    else
+        printCurWord(msg);
 }
 
 // 格式化输出分析结果
 void over()
 {
-
     if (err_cnt == 0) {
         wcout << L"\e[32mNo error. Congratulations!\e[0m" << endl;
         wcout << L"\e[32m______________________________Compile compelete!________________________________\e[0m\n"
@@ -579,31 +584,13 @@ void getWord()
     //       << strToken << setw(20) << sym_map[sym] << endl;
 }
 
-// 当前符号不在s1中，则循环查找下一个在中s1 ∪ s2的符号，，一般来说，s2是follow集
-void judge(unsigned long s1, unsigned long s2, size_t n)
+// 用于错误恢复的函数，若当前符号在s1中，则读取下一符号；若当前符号不在s1中，则报错，接着循环查找下一个在中s1 ∪ s2的符号
+template <class... T>
+void judge(unsigned long s1, unsigned long s2, size_t n, T... extra)
 {
     if (!(sym & s1)) // 当前符号不在s1中
     {
-        error(n);
-        unsigned long s3 = s1 | s2; // 把s2补充进s1
-
-        while (!(sym & s3)) // 循环找到下一个合法的符号
-        {
-            if (w_ch == L'\0')
-                over();
-            getWord(); // 继续词法分析
-        }
-        if (sym & s1)
-            getWord();
-    } else
-        getWord();
-}
-
-void judge(unsigned long s1, unsigned long s2, size_t n, const wchar_t* extra)
-{
-    if (!(sym & s1)) // 当前符号不在s1中
-    {
-        error(n, extra);
+        error(n, extra...);
         unsigned long s3 = s1 | s2; // 把s2补充进s1
 
         while (!(sym & s3)) // 循环找到下一个合法的符号
@@ -629,7 +616,7 @@ void constDef()
         // const -> id:=
         if (sym & (ASSIGN | EQL)) {
             if (sym == EQL) {
-                error(EXPECT_BECOMES_NOT_EQL);
+                error(EXPECT_STH_FIND_ANTH, L":=", L"=");
             }
             getWord();
             // const -> id:=number
@@ -783,9 +770,6 @@ void proc()
         // <proc> -> procedure id ([id {,id}]);<block> {;<proc>}
         if (sym & first_block) {
             block();
-            // 过程体结束，过程已定义
-            if (cur_info)
-                cur_info->isDefined = true;
             // 执行返回，并弹栈
             PCodeList::emit(opr, 0, OPR_RETURN);
             // 层级减少，display表弹出
@@ -999,7 +983,7 @@ void statement()
             getWord();
         } // 不是赋值号：=而是等于号=
         else if (sym == EQL) {
-            error(EXPECT_BECOMES_NOT_EQL);
+            error(EXPECT_STH_FIND_ANTH, L"=", L":=");
             getWord();
         } else {
             // 跳过非法符号，直到遇到exp的follow集
@@ -1080,11 +1064,13 @@ void statement()
         } else {
             judge(0, LPAREN, MISSING, L"identifier");
         }
+        // <statement> -> call id (
         if (sym == LPAREN) {
             getWord();
         } else {
             judge(0, first_exp | RPAREN, MISSING, L"'('");
         }
+        // <statement> -> call id ([{<exp>{,<exp>}]
         if (sym & first_exp) {
             exp();
             // 将实参传入即将调用的子过程
@@ -1109,6 +1095,7 @@ void statement()
                 error(INCOMPATIBLE_VAR_LIST);
             }
         }
+        // <statement> -> call id ([{<exp>{,<exp>}])
         if (sym == RPAREN) {
             getWord();
             // 调用子过程
@@ -1142,8 +1129,9 @@ void statement()
                 // todo
             }
             // 右值不可被赋值
-            if (cur_info && cur_info->cat == Category::CST) {
-                error(ILLEGAL_RVALUE_ASSIGN);
+            if (cur_info) {
+                if (cur_info->cat == Category::CST)
+                    error(ILLEGAL_RVALUE_ASSIGN);
                 // 从命令行读一个数据到栈顶
                 PCodeList::emit(red, 0, 0);
                 // 将栈顶值送入变量所在地址
@@ -1225,7 +1213,7 @@ void body()
     while (sym & (SEMICOLON | COMMA | first_stmt)) {
         // 判断是否存在分号，是否仅缺少分号,是否错写为逗号
         if (sym == COMMA) {
-            error(EXPECT_SEMICOLON_FIND_COMMA);
+            error(EXPECT_STH_FIND_ANTH, L";", L",");
             getWord();
         } else
             judge(SEMICOLON, first_stmt, MISSING, L"';'");
@@ -1254,6 +1242,7 @@ void block()
     }
     // 将过程所需的内存大小写入符号表
     size_t cur_proc = SymTable::sp;
+    ProcInfo* cur_info = (ProcInfo*)SymTable::table[cur_proc].info;
     SymTable::addWidth(
         cur_proc,
         glo_offset);
@@ -1262,11 +1251,14 @@ void block()
         proc();
     }
     // 为子过程开辟活动记录空间，其中为display开辟level + 1个单元
-    size_t entry = PCodeList::emit(alloc, 0, SymTable::table[cur_proc].info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + level + 1);
-    size_t target = SymTable::table[cur_proc].info->getEntry();
+    size_t entry = PCodeList::emit(alloc, 0, cur_info->offset / UNIT_SIZE + ACT_PRE_REC_SIZE + level + 1);
+    size_t target = cur_info->entry;
     // 将过程入口地址回填至过程的跳转语句
     PCodeList::backpatch(target, entry);
     // <block> -> [<condecl>][<vardecl>][<proc>]<body>
+    // 过程体开始，过程已定义
+    if (cur_proc)
+        cur_info->isDefined = true;
     body();
 }
 
@@ -1282,18 +1274,13 @@ void prog()
         SymTable::enterProgm(strToken);
         getWord();
     }
-    // 错误 <prog> -> program number
-    else if (sym == NUMBER) {
-        error(EXPECT_IDENT_FIND_NUM);
-        getWord();
-    }
     // 缺失 <prog> -> program ;
     else if (sym == SEMICOLON) {
         error(MISSING, L"identifier");
     }
     //  <prog> -> program {~id} ;
     else {
-        error(ILLEGAL_WORD, (L"'" + strToken + L"'").c_str());
+        error(ILLEGAL_WORD, strToken.c_str());
         getWord();
     }
     // <prog> -> program id;
@@ -1327,10 +1314,4 @@ void analyze()
         error(60);
     }
     over();
-}
-
-void PL0Test()
-{
-    // readFile2USC2(PROGM_PATH);
-    // analyze();
 }

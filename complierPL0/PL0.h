@@ -64,13 +64,11 @@ using namespace std;
 #define PROGM_SYM 0x40000000
 #define ELSE_SYM 0x80000000
 
-#define EXPECT_BECOMES_NOT_EQL 1
+#define EXPECT_STH_FIND_ANTH 0
 #define EXPECT_NUMEBR_AFTER_BECOMES 2
 #define EXPECT_STATEMENT 3
 #define EXPECT_EXPRESSION 4
 #define EXPECT_CONST 5
-#define EXPECT_IDENT_FIND_NUM 6
-#define EXPECT_SEMICOLON_FIND_COMMA 7
 
 #define ILLEGAL_WORD 8
 #define ILLEGAL_EXP 9
@@ -148,6 +146,7 @@ enum Category {
 
 enum Type { INTERGER };
 // 函数声明
+
 void init();
 void readFile2USC2(string);
 void analyze();
@@ -157,6 +156,6 @@ void term();
 void block();
 void body();
 void PL0Test();
-void error(size_t n);
-void error(size_t n, const wchar_t* extra);
+template <class... T>
+void error(size_t n, T... extra);
 #endif

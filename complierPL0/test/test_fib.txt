@@ -1,5 +1,6 @@
 program p;
-var n, res, i;
+const a:=1;
+var n, res;
 	procedure fib(n);
 	var sum;
 	begin
