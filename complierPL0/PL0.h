@@ -65,37 +65,25 @@ using namespace std;
 #define ELSE_SYM 0x80000000
 
 #define EXPECT_STH_FIND_ANTH 0
+#define EXPECT 1
 #define EXPECT_NUMEBR_AFTER_BECOMES 2
-#define EXPECT_STATEMENT 3
-#define EXPECT_EXPRESSION 4
-#define EXPECT_CONST 5
 
-#define ILLEGAL_WORD 8
-#define ILLEGAL_EXP 9
-#define ILLEGAL_FACTOR 10
-#define ILLEGAL_BLOCK 11
-#define ILLEGAL_CONSTDEF 12
-#define ILLEGAL_VARDECL 13
-#define ILLEGAL_CONDECL 14
-#define ILLEGAL_PROC 15
-#define ILLEGAL_TERM 16
-#define ILLEGAL_LEXP 17
-#define ILLEGAL_STMT 18
-#define ILLEGAL_RVALUE_ASSIGN 19
+#define ILLEGAL_DEFINE 3
+#define ILLEGAL_WORD 4
+#define ILLEGAL_RVALUE_ASSIGN 5
 
-#define MISSING 20
+#define MISSING 6
 
-#define REDUNDENT 21
-#define REDUNDENT_WORD 22
+#define REDUNDENT 7
 
-#define UNDECLARED_IDENT 23
-#define UNDECLARED_PROC 24
+#define UNDECLARED_IDENT 8
+#define UNDECLARED_PROC 9
 
-#define REDEFINED_IDENT 25
-#define REDEFINED_PROC 26
+#define REDECLEARED_IDENT 10
+#define REDECLEARED_PROC 11
 
-#define INCOMPATIBLE_VAR_LIST 27
-#define UNDEFINED_PROC 28
+#define INCOMPATIBLE_VAR_LIST 12
+#define UNDEFINED_PROC 13
 // 全局变量声明
 extern wchar_t w_ch; // 最近一次从文件中读出的字符
 extern unsigned long sym; // 最近一次识别出来的 token 的类型

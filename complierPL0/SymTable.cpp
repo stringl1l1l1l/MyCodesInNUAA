@@ -121,7 +121,7 @@ int SymTable::enter(wstring name, size_t offset, Category cat)
             && table[pos].info->cat != Category::FORM
             && table[pos].info->cat != Category::PROCE
             && table[pos].info->level == level) {
-            error(REDEFINED_IDENT, name.c_str());
+            error(REDECLEARED_IDENT, name.c_str());
             return -1;
         }
     }
@@ -140,7 +140,7 @@ int SymTable::enter(wstring name, size_t offset, Category cat)
     varInfo->value = 0;
     item.info = varInfo;
     table.push_back(item);
-    wcout << setw(5) << table[cur_addr].name << setw(5) << table[cur_addr].pre_item << endl;
+    // wcout << setw(5) << table[cur_addr].name << setw(5) << table[cur_addr].pre_item << endl;
     // 返回当前符号表项的地址
     return cur_addr;
 }
@@ -152,7 +152,7 @@ int SymTable::enterProc(wstring name)
     if (pos != -1
         && table[pos].info->cat == Category::PROCE
         && table[pos].info->level == level + 1) {
-        error(REDEFINED_PROC, name.c_str());
+        error(REDECLEARED_PROC, name.c_str());
         return -1;
     }
     size_t cur_addr = table.size();
@@ -169,7 +169,7 @@ int SymTable::enterProc(wstring name)
     procInfo->entry = 0;
     item.info = procInfo;
     table.push_back(item);
-    wcout << setw(5) << table[cur_addr].name << setw(5) << table[cur_addr].pre_item << endl;
+    // wcout << setw(5) << table[cur_addr].name << setw(5) << table[cur_addr].pre_item << endl;
     // 返回当前符号表项的地址
     return cur_addr;
 }

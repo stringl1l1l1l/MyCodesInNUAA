@@ -71,7 +71,7 @@ void Interpreter::opr(Operation op, int L, int a)
         top--;
     } else if (a == OPR_ODD) {
         // 栈顶元素为奇数结果为真
-        running_stack[top - 1] = (running_stack[top - 1] & 0) == 0;
+        running_stack[top - 1] = (running_stack[top - 1] & 0b1) == 1;
     } else if (a == OPR_EQL) {
         // 栈顶与次栈顶相等时结果为真
         bool res = running_stack[top - 2] == running_stack[top - 1];

@@ -131,36 +131,23 @@ void init()
     // missing错误
     err_msg[MISSING] = L"Missing %s";
     // undeclare错误
-    err_msg[UNDECLARED_IDENT] = L"Undeclared identifier %s";
-    err_msg[UNDECLARED_PROC] = L"Undeclared procedure name %s";
+    err_msg[UNDECLARED_IDENT] = L"Undeclared identifier '%s'";
+    err_msg[UNDECLARED_PROC] = L"Undeclared procedure name '%s'";
     // redefined错误
-    err_msg[REDEFINED_IDENT] = L"Redefined identifier %s";
-    err_msg[REDEFINED_PROC] = L"Redefined procedure name %s";
+    err_msg[REDECLEARED_IDENT] = L"Redecleared identifier '%s'";
+    err_msg[REDECLEARED_PROC] = L"Redecleared procedure name '%s'";
     // illegal错误
+    err_msg[ILLEGAL_DEFINE] = L"Illegal %s definition ";
     err_msg[ILLEGAL_WORD] = L"Illegal word %s";
-    err_msg[ILLEGAL_EXP] = L"Illegal exp definition";
-    err_msg[ILLEGAL_FACTOR] = L"Illegal factor definition";
-    err_msg[ILLEGAL_BLOCK] = L"Illegal block definition";
-    err_msg[ILLEGAL_CONSTDEF] = L"Illegal const definition";
-    err_msg[ILLEGAL_VARDECL] = L"Illegal var definition";
-    err_msg[ILLEGAL_CONDECL] = L"Illegal condecl definition";
-    err_msg[ILLEGAL_PROC] = L"Illegal procedure definition";
-    err_msg[ILLEGAL_TERM] = L"Illegal term definition";
-    err_msg[ILLEGAL_LEXP] = L"Illegal lexp definition";
-    err_msg[ILLEGAL_STMT] = L"Illegal statment definition";
     err_msg[ILLEGAL_RVALUE_ASSIGN] = L"Cannot assign a rvalue";
     // expect错误
-    err_msg[EXPECT_STH_FIND_ANTH] = L"Expecting '%s' but '%s' was found";
-    err_msg[EXPECT_NUMEBR_AFTER_BECOMES] = L"There must be a number to follow '='";
-    err_msg[EXPECT_STATEMENT] = L"Expecting statement";
-    err_msg[EXPECT_EXPRESSION] = L"Expecting expression";
-    err_msg[EXPECT_CONST] = L"Expecting const";
+    err_msg[EXPECT] = L"Expecting %s";
+    err_msg[EXPECT_STH_FIND_ANTH] = L"Expecting %s but %s was found";
     // redundant错误
     err_msg[REDUNDENT] = L"Redundent %s";
-    err_msg[REDUNDENT_WORD] = L"Redundent word %s";
     // 其他错误
     err_msg[INCOMPATIBLE_VAR_LIST] = L"The real variable list is incompatible with formal variable list";
-    err_msg[UNDEFINED_PROC] = L"Calling undefined procedure %s";
+    err_msg[UNDEFINED_PROC] = L"Calling undefined procedure '%s'";
 }
 
 /*UTF8 编码格式（xxx 是用来填充二进制 Unicode 码点的）
@@ -277,7 +264,7 @@ void printPreWord(const wchar_t msg[])
 
 void printCurWord(const wchar_t msg[])
 {
-    wcout << L"\e[31m(" << row_pos << "," << col_pos - 1 << L")"
+    wcout << L"\e[31m(" << row_pos << "," << col_pos << L")"
           << L" Error: " << msg << L"\e[0m " << endl;
 }
 
@@ -287,7 +274,7 @@ void error(size_t n, T... extra)
     wchar_t msg[200] = L"";
     wsprintf(msg, err_msg[n].c_str(), extra...);
     err_cnt++;
-    if (n == REDUNDENT || n == REDUNDENT_WORD || n == MISSING)
+    if (n == REDUNDENT || n == MISSING)
         printPreWord(msg);
     else
         printCurWord(msg);
@@ -629,7 +616,7 @@ void constDef()
         }
     } else {
         // 没有找到id则跳转到第一个constDef的follow集中的符号
-        judge(0, follow_constdef, ILLEGAL_CONSTDEF);
+        judge(0, follow_constdef, ILLEGAL_DEFINE, L"constDef");
     }
 }
 
@@ -648,8 +635,7 @@ void condecl()
             {
                 constDef();
             } else {
-                judge(0, IDENT, EXPECT_CONST); // todo expect常量定义式
-                constDef();
+                judge(0, IDENT | SEMICOLON, EXPECT, L"constDef"); // todo expect常量定义式
             }
         }
         // const <constDef> {,<constDef>};
@@ -660,7 +646,7 @@ void condecl()
             judge(0, follow_condecl, MISSING, L"';'"); // todo expect ;
         }
     } else {
-        judge(0, follow_condecl, ILLEGAL_CONDECL);
+        judge(0, follow_condecl, ILLEGAL_DEFINE, L"condecl");
     }
 }
 
@@ -698,7 +684,7 @@ void vardecl()
             judge(0, follow_vardecl, MISSING, L"';'");
         }
     } else {
-        judge(0, follow_vardecl, ILLEGAL_VARDECL);
+        judge(0, follow_vardecl, ILLEGAL_DEFINE, L"vardecl");
     }
 }
 
@@ -721,7 +707,7 @@ void proc()
             }
             getWord();
         } else {
-            judge(0, LPAREN, MISSING, L"identifier");
+            judge(0, LPAREN, EXPECT_STH_FIND_ANTH, L"identifier", (L"'" + strToken + L"'").c_str());
         }
         // <proc> -> procedure id (
         if (sym == LPAREN) {
@@ -786,10 +772,10 @@ void proc()
                 }
             }
         } else {
-            judge(0, follow_block, ILLEGAL_BLOCK);
+            judge(0, follow_block, ILLEGAL_DEFINE, L"block");
         }
     } else {
-        judge(0, follow_proc, ILLEGAL_PROC);
+        judge(0, follow_proc, ILLEGAL_DEFINE, L"procedure");
     }
 }
 
@@ -826,7 +812,7 @@ void exp()
             }
         }
     } else {
-        judge(0, follow_exp, ILLEGAL_EXP);
+        judge(0, follow_exp, ILLEGAL_DEFINE, L"expression");
     }
 }
 
@@ -871,7 +857,7 @@ void factor()
             judge(0, follow_factor, MISSING, L"')'");
         }
     } else {
-        judge(0, follow_factor, ILLEGAL_FACTOR);
+        judge(0, follow_factor, ILLEGAL_DEFINE, L"factor");
     }
 }
 
@@ -897,7 +883,7 @@ void term()
             }
         }
     } else {
-        judge(0, follow_term, ILLEGAL_TERM);
+        judge(0, follow_term, ILLEGAL_DEFINE, L"term");
     }
 }
 
@@ -912,7 +898,7 @@ void lexp()
             // odd
             PCodeList::emit(opr, 0, OPR_ODD);
         } else {
-            error(EXPECT_EXPRESSION);
+            error(EXPECT, L"expression");
         }
     }
     // <lexp> -> <exp> <lop> <exp>
@@ -955,7 +941,7 @@ void lexp()
             exp();
         }
     } else {
-        judge(0, follow_lexp, ILLEGAL_LEXP);
+        judge(0, follow_lexp, ILLEGAL_DEFINE, L"lexp");
     }
 }
 
@@ -1002,23 +988,27 @@ void statement()
 
         // 当前栈顶为条件表达式的布尔值
         if (sym == THEN_SYM) {
-            // 条件为假跳转，待回填else入口地址
+            // 条件为假跳转，待回填else入口地址或if外地址
             entry_jpc = PCodeList::emit(jpc, 0, 0);
             getWord();
         } else {
             judge(0, first_stmt, MISSING, L"then");
         }
+        // <statement> -> if <lexp> then <statement>
         statement();
-        // 待回填if外的入口地址
-        entry_jmp = PCodeList::emit(jmp, 0, 0);
+
         if (sym == ELSE_SYM) {
+            // 待回填if外的入口地址
+            entry_jmp = PCodeList::emit(jmp, 0, 0);
             getWord();
             // 将else入口地址回填至jpc
             PCodeList::backpatch(entry_jpc, PCodeList::code_list.size());
             statement();
-        }
-        // 将if外入口地址回填至jmp
-        PCodeList::backpatch(entry_jmp, PCodeList::code_list.size());
+            // 有else，则将if外入口地址回填至jmp
+            PCodeList::backpatch(entry_jmp, PCodeList::code_list.size());
+        } else
+            // 没有else，则将if外入口地址回填至jpc
+            PCodeList::backpatch(entry_jpc, PCodeList::code_list.size());
     }
     // <statement> -> while <lexp> do <statement>
     else if (sym == WHILE_SYM) {
@@ -1027,24 +1017,24 @@ void statement()
         size_t condition = PCodeList::code_list.size();
         lexp();
         // 当前栈顶为条件表达式的布尔值
+        // 条件为假跳转，待回填循环出口地址
+        size_t loop = PCodeList::emit(jpc, 0, 0);
         if (sym == DO_SYM) {
-            // 条件为假跳转，待回填循环出口地址
-            size_t loop = PCodeList::emit(jpc, 0, 0);
             getWord();
             statement();
             // 无条件跳转至循环条件判断前
             PCodeList::emit(jmp, 0, condition);
-            // 将循环下一条语句回填至jpc
-            PCodeList::backpatch(loop, PCodeList::code_list.size());
         } else {
             judge(0, first_stmt, MISSING, L"do");
         }
-        // todo 回填
+        // 将下一条语句回填至jpc
+        PCodeList::backpatch(loop, PCodeList::code_list.size());
     }
     // <statement> -> call id ([{<exp>{,<exp>}])
     else if (sym == CALL_SYM) {
         getWord();
         ProcInfo* cur_info = nullptr;
+        // <statement> -> call id
         if (sym == IDENT) {
             // 查找过程的符号名
             int pos = SymTable::lookUp(strToken);
@@ -1062,7 +1052,7 @@ void statement()
                 error(UNDEFINED_PROC, strToken.c_str());
             getWord();
         } else {
-            judge(0, LPAREN, MISSING, L"identifier");
+            judge(0, LPAREN, EXPECT_STH_FIND_ANTH, L"identifier", (L"'" + strToken + L"'").c_str());
         }
         // <statement> -> call id (
         if (sym == LPAREN) {
@@ -1070,13 +1060,14 @@ void statement()
         } else {
             judge(0, first_exp | RPAREN, MISSING, L"'('");
         }
-        // <statement> -> call id ([{<exp>{,<exp>}]
+        // <statement> -> call id ([{<exp>
         if (sym & first_exp) {
             exp();
             // 将实参传入即将调用的子过程
             if (cur_info)
                 PCodeList::emit(store, -1, ACT_PRE_REC_SIZE + cur_info->level + 1);
             size_t i = 1;
+            // <statement> -> call id ([{<exp>{,<exp>}]
             while (sym == COMMA) {
                 getWord();
                 if (sym & first_exp) {
@@ -1115,6 +1106,7 @@ void statement()
         } else {
             judge(0, IDENT, MISSING, L"'('");
         }
+        // <statement> -> read (id
         if (sym == IDENT) {
             int pos = SymTable::lookUp(strToken);
             // 未查找到符号
@@ -1139,7 +1131,7 @@ void statement()
             }
             getWord();
         } else {
-            judge(0, COMMA | RPAREN, MISSING, L"identifier");
+            judge(0, COMMA | RPAREN, EXPECT_STH_FIND_ANTH, L"identifier", (L"'" + strToken + L"'").c_str());
         }
         while (sym == COMMA) {
             getWord();
@@ -1178,27 +1170,34 @@ void statement()
     // <statement> -> write(<exp> {,<exp>})
     else if (WRITE_SYM) {
         getWord();
+        // <statement> -> write(
         if (sym == LPAREN) {
             getWord();
         } else {
             judge(0, first_exp, MISSING, L"'('");
         }
+        // <statement> -> write(<exp>
         exp();
         PCodeList::emit(wrt, 0, 0);
+        // <statement> -> write(<exp> {,<exp>}
         while (sym == COMMA) {
             getWord();
             if (sym == RPAREN)
                 error(REDUNDENT, L"','");
             else
+            {
                 exp();
+                PCodeList::emit(wrt, 0, 0);
+            }
         }
+        // <statement> -> write(<exp> {,<exp>})
         if (sym == RPAREN) {
             getWord();
         } else {
             judge(0, follow_stmt, MISSING, L"')'");
         }
     } else
-        judge(0, follow_stmt, ILLEGAL_STMT);
+        judge(0, follow_stmt, ILLEGAL_DEFINE, L"statement");
 }
 
 // <body> -> begin <statement> {;<statement>} end
@@ -1280,7 +1279,7 @@ void prog()
     }
     //  <prog> -> program {~id} ;
     else {
-        error(ILLEGAL_WORD, strToken.c_str());
+        error(EXPECT_STH_FIND_ANTH, L"identifier", (L"'" + strToken + L"'").c_str());
         getWord();
     }
     // <prog> -> program id;
