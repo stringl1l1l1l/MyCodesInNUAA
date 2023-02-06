@@ -3,6 +3,10 @@ var x;
 procedure B(n);
     procedure B(n);
         procedure B(n);
+            procedure B(n);
+            begin
+                x:=1
+            end
         begin
             x:=1
         end

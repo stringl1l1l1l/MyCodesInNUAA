@@ -23,7 +23,7 @@ int main()
             wcout << L"请输入下一个待编译的文件名称, 或输入'r'重复, 或按Ctrl+C结束" << endl;
             continue;
         }
-        // symTableTest();
+        symTableTest();
         PCodeList::printCode();
         Interpreter::run();
         wcout << L"请输入下一个待编译的文件名称, 或按Ctrl+C结束" << endl;

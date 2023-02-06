@@ -15,5 +15,5 @@ var j,sum,x;
      end
 begin
      read(x,j);
-     call sum1(j);
+     call sum1(j)
 end

@@ -274,7 +274,7 @@ void error(size_t n, T... extra)
     wchar_t msg[200] = L"";
     wsprintf(msg, err_msg[n].c_str(), extra...);
     err_cnt++;
-    if (n == REDUNDENT || n == MISSING)
+    if (n == REDUNDENT || n == MISSING || n == UNDECLARED_PROC)
         printPreWord(msg);
     else
         printCurWord(msg);
@@ -603,7 +603,7 @@ void constDef()
         // const -> id:=
         if (sym & (ASSIGN | EQL)) {
             if (sym == EQL) {
-                error(EXPECT_STH_FIND_ANTH, L":=", L"=");
+                error(EXPECT_STH_FIND_ANTH, L"':='", L"'='");
             }
             getWord();
             // const -> id:=number
@@ -969,7 +969,7 @@ void statement()
             getWord();
         } // 不是赋值号：=而是等于号=
         else if (sym == EQL) {
-            error(EXPECT_STH_FIND_ANTH, L"=", L":=");
+            error(EXPECT_STH_FIND_ANTH, L"'='", L"':='");
             getWord();
         } else {
             // 跳过非法符号，直到遇到exp的follow集
@@ -1133,6 +1133,7 @@ void statement()
         } else {
             judge(0, COMMA | RPAREN, EXPECT_STH_FIND_ANTH, L"identifier", (L"'" + strToken + L"'").c_str());
         }
+        // <statement> -> read (id{,
         while (sym == COMMA) {
             getWord();
             if (sym == IDENT) {
@@ -1149,8 +1150,9 @@ void statement()
                     // todo
                 }
                 // 右值不可被赋值
-                if (cur_info && cur_info->cat == Category::CST) {
-                    error(ILLEGAL_RVALUE_ASSIGN);
+                if (cur_info) {
+                    if (cur_info->cat == Category::CST)
+                        error(ILLEGAL_RVALUE_ASSIGN);
                     // 从命令行读一个数据到栈顶
                     PCodeList::emit(red, 0, 0);
                     // 将栈顶值送入变量所在地址
@@ -1184,8 +1186,7 @@ void statement()
             getWord();
             if (sym == RPAREN)
                 error(REDUNDENT, L"','");
-            else
-            {
+            else {
                 exp();
                 PCodeList::emit(wrt, 0, 0);
             }
@@ -1212,7 +1213,7 @@ void body()
     while (sym & (SEMICOLON | COMMA | first_stmt)) {
         // 判断是否存在分号，是否仅缺少分号,是否错写为逗号
         if (sym == COMMA) {
-            error(EXPECT_STH_FIND_ANTH, L";", L",");
+            error(EXPECT_STH_FIND_ANTH, L"';'", L"','");
             getWord();
         } else
             judge(SEMICOLON, first_stmt, MISSING, L"';'");

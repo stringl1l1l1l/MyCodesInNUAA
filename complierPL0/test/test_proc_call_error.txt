@@ -5,22 +5,22 @@ procedure B(n);
         procedure E(n);
         begin
             x := n-1;
-            if x > -10 then
-            begin
-                call C(x)
-            end
+            write(x)
         end
     begin
         x:= n-1;
-        call E(x)
+        write(x)
     end;
     procedure D(n);
     begin
         x:= n-1;
-        call C(x)
+        write(x);
+        call C(x);
+        call B(x)
     end
 begin
     x:= n-1;
+    write(x);
     call D(x)
 end
 

@@ -1,10 +1,10 @@
-program a;
-const m:=7, n:=85;
+program a；
+const 常:=7， n:=85;
 var x,y,z,q,r;
 procedure write(x,y,z)
     var a,b;
     begin
-        a:=x; b:=y; z:=0;
+        a=x; b:=y; z:=0;
         while b 0 do
         begin
             if odd then z:=z+a;
@@ -28,8 +28,7 @@ procedure divide(x,y,q,r);
         end
     end;
 
-procedure gcd(x,y);
-
+procedure divide(x,y);
     var f,g;
     begin
         f:=x;
@@ -46,13 +45,13 @@ begin
         begin
             x:=m; y:=n; call multiply(x,y,z);
             x:=25; y:=3; call divide(x,y,q,r);
-            x:=34; y:=36; call gcd(x,y)
-            read(1,a)
+            x:=34; y:=36; call gcd(x,y);
+            read(1,a);
         end
     else
         begin
             begin
-                num:=1
+                x:=1
             end
         end
 end
