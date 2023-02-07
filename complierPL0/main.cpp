@@ -11,7 +11,7 @@ int main()
         init();
         if (str != "r")
             filename = str;
-        readFile2USC2("..\\complierPL0\\test\\"
+        readFile2USC2("E:\\Programming\\GitHub\\repository\\DataStruct\\complierPL0\\test\\"
             + filename + ".txt");
         if (progm_w_str.empty()) {
             wcout << L"请输入下一个待编译的文件名称, 或输入'r'重复, 或按Ctrl+C结束" << endl;

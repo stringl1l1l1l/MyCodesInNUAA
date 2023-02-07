@@ -1,7 +1,7 @@
 program p;
 const a:=1;
 var n, res, i;
-    procedure fib(n);
+    procedure fib(a,b,c,n);
     var sum;
     begin
         sum := 0;
@@ -9,9 +9,9 @@ var n, res, i;
             res := 1
         else
         begin
-            call fib(n-1);
+            call fib(a,b,c,n-1);
             sum := sum + res;
-            call fib(n-2);
+            call fib(a,b,c,n-2);
             sum := sum + res;
             res := sum
         end
@@ -21,7 +21,7 @@ begin
     read(n);
     while i<=n do
     begin
-        call fib(i);
+        call fib(1,2,3,i);
         write(res);
         i := i+1
     end

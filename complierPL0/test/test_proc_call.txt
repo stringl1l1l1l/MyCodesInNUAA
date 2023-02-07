@@ -3,6 +3,7 @@ var x;
 procedure B(n);
     procedure C(n);
         procedure E(n);
+        var n,x;
         begin
             x := n-1
         end

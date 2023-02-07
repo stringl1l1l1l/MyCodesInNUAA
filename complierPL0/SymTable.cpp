@@ -113,18 +113,13 @@ void SymTable::mkTable()
 
 int SymTable::enter(wstring name, size_t offset, Category cat)
 {
-    // 若为形参，则不需要检查
-    if (cat != Category::FORM) {
-        int pos = lookUp(name);
-        // 如果查找到重复符号，且必须在同一层级，不为形参、过程名，则说明出现变量名重定义
-        if (pos != -1
-            && table[pos].info->cat != Category::FORM
-            && table[pos].info->cat != Category::PROCE
-            && table[pos].info->level == level) {
-            error(REDECLEARED_IDENT, name.c_str());
-            return -1;
-        }
+    int pos = lookUpVar(name);
+    // 如果查找到重复符号，且必须在同一层级，不为形参、过程名，则说明出现变量名重定义
+    if (pos != -1 && table[pos].info->level == level) {
+        error(REDECLEARED_IDENT, name.c_str());
+        return -1;
     }
+
     // 记录当前即将登入的符号表项的地址
     size_t cur_addr = table.size();
     SymTableItem item;
@@ -148,10 +143,8 @@ int SymTable::enter(wstring name, size_t offset, Category cat)
 int SymTable::enterProc(wstring name)
 {
     // 若查找到重复符号，且为同一层级的过程名，则出现过程重定义
-    int pos = lookUp(name);
-    if (pos != -1
-        && table[pos].info->cat == Category::PROCE
-        && table[pos].info->level == level + 1) {
+    int pos = lookUpProc(name);
+    if (pos != -1 && table[pos].info->level == level + 1) {
         error(REDECLEARED_PROC, name.c_str());
         return -1;
     }
@@ -187,7 +180,30 @@ void SymTable::enterProgm(wstring name)
     table.push_back(item);
 }
 
-int SymTable::lookUp(wstring name)
+int SymTable::lookUpProc(wstring name)
+{
+    unsigned int curAddr = 0;
+    // i代表访问display的指针
+    // 若查找主过程名，直接返回-1
+    if (level == 0 && display[0] == 0)
+        return -1;
+    for (int i = level; i >= 0; i--) {
+        curAddr = display[i];
+        // 遍历当前display指针指向的过程下的所有过程符号，直到遇到最后一个符号(pre == 0)
+        while (1) {
+            if (table[curAddr].info->cat == Category::PROCE
+                && table[curAddr].name == name) {
+                return curAddr;
+            }
+            if (table[curAddr].pre_item == 0)
+                break;
+            curAddr = table[curAddr].pre_item;
+        }
+    }
+    return -1;
+}
+
+int SymTable::lookUpVar(wstring name)
 {
     unsigned int curAddr = 0;
     // i代表访问display的指针
@@ -198,7 +214,7 @@ int SymTable::lookUp(wstring name)
         curAddr = display[i];
         // 遍历当前display指针指向的过程下的所有变量符号，直到遇到最后一个符号(pre == 0)
         while (1) {
-            if (table[curAddr].name == name) {
+            if (table[curAddr].info->cat != Category::PROCE && table[curAddr].name == name) {
                 return curAddr;
             }
             if (table[curAddr].pre_item == 0)
@@ -252,11 +268,11 @@ void symTableTest()
         mem.show();
     }
     wcout << L"___________________________________________________________________________________________________________" << endl;
-    wcout << L"________________display________________" << endl;
-    wcout << setw(10) << L"addr" << setw(10) << L"proc" << endl;
-    for (int i = 0; i < SymTable::display.size(); i++) {
-        int mem = SymTable::display[i];
-        if (mem != -1)
-            wcout << setw(10) << mem << setw(10) << SymTable::table[mem].name << endl;
-    }
+    // wcout << L"________________display________________" << endl;
+    // wcout << setw(10) << L"addr" << setw(10) << L"proc" << endl;
+    // for (int i = 0; i < SymTable::display.size(); i++) {
+    //     int mem = SymTable::display[i];
+    //     if (mem != -1)
+    //         wcout << setw(10) << mem << setw(10) << SymTable::table[mem].name << endl;
+    // }
 }

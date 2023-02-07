@@ -821,18 +821,13 @@ void factor()
 {
     if (sym == IDENT) {
         // 查找变量符号
-        int pos = SymTable::lookUp(strToken);
+        int pos = SymTable::lookUpVar(strToken);
         VarInfo* cur_info = nullptr;
         if (pos == -1)
             error(UNDECLARED_IDENT, strToken.c_str());
         // 若为常量，直接获取其符号表中的右值
-        else if (SymTable::table[pos].info->cat != Category::PROCE)
-            // 用临时变量记录当前查到的信息
-            cur_info = (VarInfo*)SymTable::table[pos].info;
-        // 查找到重名的过程符号
-        else {
-            // todo
-        }
+        // 用临时变量记录当前查到的信息
+        cur_info = (VarInfo*)SymTable::table[pos].info;
         if (cur_info) {
             if (cur_info->cat == Category::CST) {
                 int val = cur_info->getValue();
@@ -950,17 +945,12 @@ void statement()
     // <statement> -> id := <exp>
     if (sym == IDENT) {
         // 查找当前变量是否在符号表中
-        int pos = SymTable::lookUp(strToken);
+        int pos = SymTable::lookUpVar(strToken);
         VarInfo* cur_info = nullptr;
         // 未查找到符号
         if (pos == -1)
             error(UNDECLARED_IDENT, strToken.c_str());
-        else if (SymTable::table[pos].info->cat != Category::PROCE) // 用临时变量记录当前查到的信息
-            cur_info = (VarInfo*)SymTable::table[pos].info;
-        // 查找到重名的过程符号
-        else {
-            // todo
-        };
+        cur_info = (VarInfo*)SymTable::table[pos].info;
         getWord();
         if (sym == ASSIGN) {
             // 查找到右值，右值不可被赋值
@@ -1037,16 +1027,11 @@ void statement()
         // <statement> -> call id
         if (sym == IDENT) {
             // 查找过程的符号名
-            int pos = SymTable::lookUp(strToken);
+            int pos = SymTable::lookUpProc(strToken);
             // 未查找到过程名
             if (pos == -1)
                 error(UNDECLARED_PROC, strToken.c_str());
-            else if (SymTable::table[pos].info->cat == Category::PROCE)
-                cur_info = (ProcInfo*)SymTable::table[pos].info;
-            // 查找到重名的非过程符号
-            else {
-                // todo
-            }
+            cur_info = (ProcInfo*)SymTable::table[pos].info;
             // 若调用未定义的过程
             if (cur_info && !cur_info->isDefined)
                 error(UNDEFINED_PROC, strToken.c_str());
@@ -1074,12 +1059,11 @@ void statement()
                     exp();
                     // 将实参传入即将调用的子过程
                     if (cur_info)
-                        PCodeList::emit(store, -1, i + ACT_PRE_REC_SIZE + cur_info->level + 1);
+                        PCodeList::emit(store, -1, ACT_PRE_REC_SIZE + cur_info->level + 1 + i++);
                 } else {
                     judge(0, first_exp, REDUNDENT, L"','");
                     exp();
                 }
-                i++;
             }
             // 若实参列表与形参列表变量数不兼容，报错
             if (cur_info && i != cur_info->form_var_list.size()) {
@@ -1108,18 +1092,14 @@ void statement()
         }
         // <statement> -> read (id
         if (sym == IDENT) {
-            int pos = SymTable::lookUp(strToken);
+            // 查找变量符号
+            int pos = SymTable::lookUpVar(strToken);
             // 未查找到符号
             VarInfo* cur_info = nullptr;
             if (pos == -1)
                 error(UNDECLARED_IDENT, strToken.c_str());
-            else if (SymTable::table[pos].info->cat != Category::PROCE)
-                // 用临时变量记录当前查到的信息
-                cur_info = (VarInfo*)SymTable::table[pos].info;
-            // 查找到重名的过程符号
-            else {
-                // todo
-            }
+            // 用临时变量记录当前查到的信息
+            cur_info = (VarInfo*)SymTable::table[pos].info;
             // 右值不可被赋值
             if (cur_info) {
                 if (cur_info->cat == Category::CST)
@@ -1137,18 +1117,13 @@ void statement()
         while (sym == COMMA) {
             getWord();
             if (sym == IDENT) {
-                int pos = SymTable::lookUp(strToken);
+                int pos = SymTable::lookUpVar(strToken);
                 // 未查找到符号
                 VarInfo* cur_info = nullptr;
                 if (pos == -1)
                     error(UNDECLARED_IDENT, strToken.c_str());
-                else if (SymTable::table[pos].info->cat != Category::PROCE)
-                    // 用临时变量记录当前查到的信息
-                    cur_info = (VarInfo*)SymTable::table[pos].info;
-                // 查找到重名的过程符号
-                else {
-                    // todo
-                }
+                // 用临时变量记录当前查到的信息
+                cur_info = (VarInfo*)SymTable::table[pos].info;
                 // 右值不可被赋值
                 if (cur_info) {
                     if (cur_info->cat == Category::CST)

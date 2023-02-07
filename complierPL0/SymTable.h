@@ -37,7 +37,7 @@ public:
 // 过程信息，继承信息类型
 class ProcInfo : public Information {
 public:
-    bool isDefined;// 过程是否定义的标识
+    bool isDefined; // 过程是否定义的标识
     size_t entry; // 过程的中间代码入口地址
     vector<size_t> form_var_list; // 过程的形参入口地址列表
 
@@ -73,7 +73,8 @@ public:
     static int enterProc(wstring name);
     static void enterProgm(wstring name);
     // 查找符号在符号表中位置
-    static int lookUp(wstring name);
+    static int lookUpVar(wstring name);
+    static int lookUpProc(wstring name);
     // 清空符号表
     static void clear();
 };

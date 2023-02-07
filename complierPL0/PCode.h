@@ -4,9 +4,9 @@
 #include <string>
 #include <vector>
 using namespace std;
-#define P_CODE_CNT 10
-#define UNIT_SIZE 4
-#define ACT_PRE_REC_SIZE 3
+#define P_CODE_CNT 10 // P-Code的种类数
+#define UNIT_SIZE 4 // 一个内存单元的字节大小
+#define ACT_PRE_REC_SIZE 3 // 活动记录的预先大小（RA、DL、全局Display）
 
 #define OPR_RETURN 0
 #define OPR_NEGTIVE 1

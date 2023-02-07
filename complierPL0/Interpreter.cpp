@@ -9,7 +9,12 @@ vector<int> Interpreter::running_stack;
 // 取常量a放入数据栈栈顶
 void Interpreter::lit(Operation op, int L, int a)
 {
-    running_stack.push_back(a);
+    // 内存栈顶等于数据栈顶，需要额外开辟空间
+    if (top == running_stack.size())
+        running_stack.push_back(a);
+    // 内存栈顶大于数据栈顶，直接赋值
+    else
+        running_stack[top] = a;
     top++;
     pc++;
 }
@@ -23,10 +28,7 @@ void Interpreter::opr(Operation op, int L, int a)
         // 恢复断点，此处-1是因为这个函数末尾有个+1，debug了半天才发现
         pc = running_stack[sp + RA] - 1;
         int old_sp = running_stack[sp + DL];
-        // 将当前过程活动记录全部弹栈
-        for (int i = 0; i < top - sp; i++) {
-            running_stack.pop_back();
-        }
+        // top指针还原到上一个活动记录位置
         top -= top - sp;
         // 恢复老sp
         sp = old_sp;
@@ -36,38 +38,26 @@ void Interpreter::opr(Operation op, int L, int a)
     } else if (a == OPR_ADD) {
         // 次栈顶加栈顶
         int res = running_stack[top - 2] + running_stack[top - 1];
-        // 弹栈两次
-        running_stack.pop_back();
-        running_stack.pop_back();
-        // 新值入栈
-        running_stack.push_back(res);
+        // 直接在次栈顶赋值
+        running_stack[top - 2] = res;
         top--;
     } else if (a == OPR_SUB) {
         // 次栈顶减栈顶
         int res = running_stack[top - 2] - running_stack[top - 1];
-        // 弹栈两次
-        running_stack.pop_back();
-        running_stack.pop_back();
-        // 新值入栈
-        running_stack.push_back(res);
+        // 直接在次栈顶赋值
+        running_stack[top - 2] = res;
         top--;
     } else if (a == OPR_MULTI) {
         // 次栈顶乘栈顶
         int res = running_stack[top - 2] * running_stack[top - 1];
-        // 弹栈两次
-        running_stack.pop_back();
-        running_stack.pop_back();
-        // 新值入栈
-        running_stack.push_back(res);
+        // 直接在次栈顶赋值
+        running_stack[top - 2] = res;
         top--;
     } else if (a == OPR_DIVIS) {
         // 次栈顶除栈顶
         int res = running_stack[top - 2] / running_stack[top - 1];
-        // 弹栈两次
-        running_stack.pop_back();
-        running_stack.pop_back();
-        // 新值入栈
-        running_stack.push_back(res);
+        // 直接在次栈顶赋值
+        running_stack[top - 2] = res;
         top--;
     } else if (a == OPR_ODD) {
         // 栈顶元素为奇数结果为真
@@ -75,56 +65,38 @@ void Interpreter::opr(Operation op, int L, int a)
     } else if (a == OPR_EQL) {
         // 栈顶与次栈顶相等时结果为真
         bool res = running_stack[top - 2] == running_stack[top - 1];
-        // 弹栈两次
-        running_stack.pop_back();
-        running_stack.pop_back();
-        // 新值入栈
-        running_stack.push_back(res);
+        // 直接在次栈顶赋值
+        running_stack[top - 2] = res;
         top--;
     } else if (a == OPR_NEQ) {
         // 栈顶与次栈顶不相等时结果为真
         bool res = running_stack[top - 2] != running_stack[top - 1];
-        // 弹栈两次
-        running_stack.pop_back();
-        running_stack.pop_back();
-        // 新值入栈
-        running_stack.push_back(res);
+        // 直接在次栈顶赋值
+        running_stack[top - 2] = res;
         top--;
     } else if (a == OPR_LSS) {
         // 次栈顶 < 栈顶时结果为真
         bool res = running_stack[top - 2] < running_stack[top - 1];
-        // 弹栈两次
-        running_stack.pop_back();
-        running_stack.pop_back();
-        // 新值入栈
-        running_stack.push_back(res);
+        // 直接在次栈顶赋值
+        running_stack[top - 2] = res;
         top--;
     } else if (a == OPR_LEQ) {
         // 次栈顶 <= 栈顶时结果为真
         bool res = running_stack[top - 2] <= running_stack[top - 1];
-        // 弹栈两次
-        running_stack.pop_back();
-        running_stack.pop_back();
-        // 新值入栈
-        running_stack.push_back(res);
+        // 直接在次栈顶赋值
+        running_stack[top - 2] = res;
         top--;
     } else if (a == OPR_GRT) {
         // 次栈顶 > 栈顶时结果为真
         bool res = running_stack[top - 2] > running_stack[top - 1];
-        // 弹栈两次
-        running_stack.pop_back();
-        running_stack.pop_back();
-        // 新值入栈
-        running_stack.push_back(res);
+        // 直接在次栈顶赋值
+        running_stack[top - 2] = res;
         top--;
     } else if (a == OPR_GEQ) {
         // 次栈顶 >= 栈顶时结果为真
         bool res = running_stack[top - 2] >= running_stack[top - 1];
-        // 弹栈两次
-        running_stack.pop_back();
-        running_stack.pop_back();
-        // 新值入栈
-        running_stack.push_back(res);
+        // 直接在次栈顶赋值
+        running_stack[top - 2] = res;
         top--;
     }
     pc++;
@@ -135,7 +107,12 @@ void Interpreter::lod(Operation op, int L, int a)
 {
     // 根据层级和偏移量，查找display表
     // running_stack[sp + DISPLAY + L]即指定层级L的活动记录基地址
-    running_stack.push_back(running_stack[running_stack[sp + DISPLAY + L] + a]);
+    // 内存栈顶等于数据栈顶，需要额外开辟空间
+    if (top == running_stack.size())
+        running_stack.push_back(running_stack[running_stack[sp + DISPLAY + L] + a]);
+    // 内存栈顶大于数据栈顶，直接赋值
+    else
+        running_stack[top] = running_stack[running_stack[sp + DISPLAY + L] + a];
     top++;
     pc++;
 }
@@ -147,19 +124,15 @@ void Interpreter::sto(Operation op, int L, int a)
         // 根据层级和偏移量，查找display表
         // running_stack[sp + DISPLAY + L]即指定层级L的活动记录基地址
         running_stack[running_stack[sp + DISPLAY + L] + a] = running_stack[top - 1];
-        // 读取数据后弹栈
-        running_stack.pop_back();
         top--;
     }
     // L为-1，说明这是形参传递的代码，需要预先开辟空间
     else {
         size_t cur_size = running_stack.size();
-        // 取出栈顶值，并弹栈
-        int val = running_stack[cur_size - 1];
-        running_stack.pop_back();
-        cur_size--;
+        // 取出栈顶值(top-1处)
+        int val = running_stack[top - 1];
         top--;
-        // 预先开辟空间，个数为a+1(a为变量下标，从0计数)
+        // 预先开辟空间，个数为a+1-（cur_size-top）（当前已额外开辟的空间）
         for (int i = cur_size - top; i <= a; i++)
             running_stack.push_back(0);
         // 将形参传递至指定位置
@@ -192,11 +165,16 @@ void Interpreter::cal(Operation op, int L, int a)
 void Interpreter::alc(Operation op, int L, int a)
 {
     size_t cur_size = running_stack.size();
-    // 开辟空间时减去已经额外开辟的空间
-    for (int i = 0; i < a - (cur_size - top); i++)
-        running_stack.push_back(0);
-    // 数据栈顶与内存栈顶对齐
-    top = running_stack.size();
+    // 若当前额外空间满足要求，直接移动数据栈顶指针
+    if (a <= cur_size - top)
+        top += a;
+    else {
+        // 开辟空间时减去已经额外开辟的空间
+        for (int i = 0; i < a - (cur_size - top); i++)
+            running_stack.push_back(0);
+        // 内存栈顶与数据栈顶对齐
+        top = running_stack.size();
+    }
     // 将新的display地址送到新的活动记录中的全局display处
     running_stack[sp + GLO_DIS] = sp + DISPLAY;
     pc++;
@@ -217,8 +195,6 @@ void Interpreter::jpc(Operation op, int L, int a)
     // 栈顶条件为真
     else
         pc++;
-    // 弹栈
-    running_stack.pop_back();
     top--;
 }
 
@@ -229,7 +205,10 @@ void Interpreter::red(Operation op, int L, int a)
     wcout << "read: ";
     wcin >> data;
     // 数据入栈
-    running_stack.push_back(data);
+    if (top == running_stack.size())
+        running_stack.push_back(data);
+    else
+        running_stack[top] = data;
     top++;
     pc++;
 }
@@ -238,8 +217,6 @@ void Interpreter::red(Operation op, int L, int a)
 void Interpreter::wrt(Operation op, int L, int a)
 {
     wcout << "write: " << running_stack[top - 1] << endl;
-    // 弹栈
-    running_stack.pop_back();
     top--;
     pc++;
 }
