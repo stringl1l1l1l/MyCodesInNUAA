@@ -1,6 +1,5 @@
 #include "Interpreter.h"
 #include "PL0.h"
-#include <iostream>
 
 size_t Interpreter::pc = 0;
 size_t Interpreter::top = 0;

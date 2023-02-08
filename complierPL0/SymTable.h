@@ -1,13 +1,21 @@
 #ifndef _SYMBOL_TABLE_H
 #define _SYMBOL_TABLE_H
 
-#include "PL0.h"
 #include <iomanip>
 #include <string>
 #include <sys/stat.h>
 #include <vector>
-
 using namespace std;
+
+enum Type { INTERGER };
+enum Category {
+    NIL, // 空
+    ARR, // 数组
+    VAR, // 变量
+    PROCE, // 过程
+    CST, // 常量
+    FORM, // 形参
+};
 // 父类信息类型
 class Information {
 public:
@@ -50,7 +58,7 @@ public:
 // 符号表项
 class SymTableItem {
 public:
-    unsigned int pre_item;
+    size_t pre_item;
     Information* info;
     wstring name; // 符号名
     void show();

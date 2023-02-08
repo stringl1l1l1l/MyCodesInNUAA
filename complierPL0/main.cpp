@@ -1,7 +1,10 @@
+#include "ErrorHandler.h"
 #include "Interpreter.h"
 #include "PCode.h"
 #include "PL0.h"
+#include "Parser.h"
 #include "SymTable.h"
+
 int main()
 {
     init();
@@ -26,6 +29,6 @@ int main()
         symTableTest();
         PCodeList::printCode();
         Interpreter::run();
-        wcout << L"请输入下一个待编译的文件名称, 或按Ctrl+C结束" << endl;
+        wcout << L"请输入下一个待编译的文件名称, 或输入'r'重复, 或按Ctrl+C结束" << endl;
     }
 }

@@ -1,9 +1,9 @@
 #ifndef _INTER_H
 #define _INTER_H
-#include "PCode.h"
-#include <vector>
 
+#include "PCode.h"
 using namespace std;
+
 #define RA 0
 #define DL 1
 #define GLO_DIS 2

@@ -1,4 +1,6 @@
 #include "SymTable.h"
+#include "ErrorHandler.h"
+#include "PL0.h"
 #include <iomanip>
 #include <iostream>
 #include <ostream>
@@ -6,7 +8,6 @@
 #include <stdlib.h>
 #include <string>
 #include <vector>
-
 size_t SymTable::sp = 0;
 vector<SymTableItem> SymTable::table; // 一个程序唯一的符号表
 vector<size_t> SymTable::display; // 过程的嵌套层次表
@@ -119,7 +120,6 @@ int SymTable::enter(wstring name, size_t offset, Category cat)
         error(REDECLEARED_IDENT, name.c_str());
         return -1;
     }
-
     // 记录当前即将登入的符号表项的地址
     size_t cur_addr = table.size();
     SymTableItem item;

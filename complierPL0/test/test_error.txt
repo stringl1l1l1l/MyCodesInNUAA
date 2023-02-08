@@ -14,6 +14,10 @@ procedure write(x,y,z)
 
 procedure divide(x,y,q,r);
     var w;
+    procedure a();
+        begin
+        call divide(1,2,3,4)
+        end;
     begin
         r:=x; q:=0; w:=y;
         while w<=r do w:=2*w;
